@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { eventually, withFixture } from './fixture.mjs';
 
-// The four small bugs reported from use: a view's tab answers a right-click
+// Small bugs reported from use: a view's tab answers a right-click
 // (#24), so does a template (#20), a row menu near the bottom of the tree is
 // not cut off by the section under it (#21), ↑ does not skip an empty first
 // block on its way to the title (#25), and the library's shelves scroll inside
-// a narrow pane instead of running off it (#19).
+// a narrow pane instead of running off it (#19). The workspace switcher also
+// scrolls inside the window instead of running off it (#41).
 await withFixture(async ({ page, api, base, workspace, read }) => {
   page.setDefaultTimeout(15000);
 
@@ -118,5 +119,32 @@ await withFixture(async ({ page, api, base, workspace, read }) => {
   assert(fit.right <= fit.paneRight + 1, 'the shelves end inside the pane');
   assert(fit.scrolls, 'the shelves that do not fit are reached by scrolling');
 
-  console.log('Menus, view tabs, arrow keys, the icon picker and library shelves passed.');
+  // #41 — every workspace and the actions below the list remain reachable.
+  for (let i = 0; i < 30; i++) {
+    await api('POST', '/api/workspaces', { name: `Workspace ${String(i).padStart(2, '0')}` });
+  }
+  await page.reload();
+  for (const height of [900, 480]) {
+    await page.setViewportSize({ width: 1200, height });
+    await page.locator('.ws-btn').click();
+    const workspaces = page.locator('.ws-menu');
+    await workspaces.waitFor();
+    const bounds = await workspaces.boundingBox();
+    assert(bounds.y >= 0 && bounds.y + bounds.height <= height,
+      'the workspace menu fits the viewport');
+    const separator = await workspaces.locator('.menu-sep').boundingBox();
+    assert(separator.height > 0, 'the divider remains visible when the menu scrolls');
+    const last = workspaces.locator('.ws-menu-item:not(.active)').last();
+    const name = await last.locator('.ws-menu-name').innerText();
+    await last.click();
+    await workspaces.waitFor({ state: 'hidden' });
+    await eventually(async () => (await page.locator('.ws-btn strong').innerText()) === name);
+    await page.locator('.ws-btn').click();
+    await page.locator('.ws-menu').getByRole('button', { name: 'New workspace', exact: true }).click();
+    await page.getByRole('dialog').waitFor();
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+    await page.getByRole('dialog').waitFor({ state: 'hidden' });
+  }
+
+  console.log('Menus, view tabs, arrow keys, the icon picker, library shelves and workspace switcher passed.');
 });

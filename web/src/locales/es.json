@@ -190,6 +190,7 @@
   "Creates the account straight away. No email is sent.": "Crea la cuenta de inmediato. No se envía ningún correo.",
   "Current password (needed to change the email)": "Contraseña actual (necesaria para cambiar el correo)",
   "Current password (to confirm)": "Contraseña actual (para confirmar)",
+  "Current user": "Usuario actual",
   "Custom period": "Período personalizado",
   "Dark": "Oscuro",
   "Data": "Datos",

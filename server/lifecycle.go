@@ -22,7 +22,12 @@ type dupRow struct {
 // template is a snapshot, so the original stays a normal page and later edits
 // to it never change the template. Without asTemplate the copy is never a
 // template. Returns the new root id.
-func (s *Server) duplicatePage(rootID, userID string, fromTemplate, asTemplate bool) (string, error) {
+//
+// copyTitle, when set, names the copy instead. The server writes "Copy of" in
+// English, which suits an agent or curl but was stored as the title of every
+// page duplicated in a German interface (#114); the browser sends the name in
+// its reader's language.
+func (s *Server) duplicatePage(rootID, userID string, fromTemplate, asTemplate bool, copyTitle string) (string, error) {
 	// Copies land beside the source. Read access to a template does not grant
 	// permission to create content in its workspace or under its parent.
 	if !s.canWrite(userID, rootID) {
@@ -141,8 +146,12 @@ func (s *Server) duplicatePage(rootID, userID string, fromTemplate, asTemplate b
 			parent = rootParent
 			pos = rootPos
 			// A snapshot keeps its name — "Copy of" is for duplicates that live
-			// beside their original in the same list.
-			if !fromTemplate && !asTemplate {
+			// beside their original in the same list. A page without a title
+			// gives a copy without one, shown as Untitled in the reader's
+			// language, rather than a stored "Copy of ".
+			if copyTitle != "" {
+				title = copyTitle
+			} else if !fromTemplate && !asTemplate && d.title != "" {
 				title = "Copy of " + d.title
 			}
 			if asTemplate {
@@ -180,7 +189,22 @@ func (s *Server) handleDuplicatePage(w http.ResponseWriter, r *http.Request) {
 		httpError(w, 403, "forbidden")
 		return
 	}
-	newRoot, err := s.duplicatePage(pageID, u.ID, r.URL.Query().Get("fromTemplate") == "1", r.URL.Query().Get("asTemplate") == "1")
+	// The name of the copy may come along, in the language of whoever made it.
+	var body struct {
+		Title string `json:"title"`
+	}
+	if r.ContentLength != 0 {
+		if err := decodeJSON(w, r, &body); err != nil {
+			httpError(w, 400, "invalid JSON")
+			return
+		}
+	}
+	body.Title = strings.TrimSpace(body.Title)
+	if len([]rune(body.Title)) > maxTitleLen {
+		httpError(w, 400, "title is too long")
+		return
+	}
+	newRoot, err := s.duplicatePage(pageID, u.ID, r.URL.Query().Get("fromTemplate") == "1", r.URL.Query().Get("asTemplate") == "1", body.Title)
 	if err == sql.ErrNoRows {
 		httpError(w, 404, "page not found")
 		return

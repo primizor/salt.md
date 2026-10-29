@@ -1134,5 +1134,6 @@
   "The new row does not match this view's filters, so it is not shown here.": "Die neue Zeile passt nicht zu den Filtern dieser Ansicht und wird hier deshalb nicht angezeigt.",
   "Some uploaded files could not be read, so the backup would be incomplete. The server log names them.": "Einige hochgeladene Dateien konnten nicht gelesen werden, die Sicherung wäre also unvollständig. Das Server-Protokoll nennt sie.",
   "Written by an agent through this account": "Von einem Agenten über dieses Konto geschrieben",
-  "Agent": "Agent"
+  "Agent": "Agent",
+  "Copy of {title}": "Kopie von {title}"
 }

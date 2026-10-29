@@ -386,8 +386,9 @@ hang off the page id, which does not change: a move takes them with it.
 
 **Duplicate** in the sidebar ⋯ makes a deep copy: the page, its whole subtree,
 and (for a collection) its property schema and its views. The copy is added at
-the **end of the same list** as the original, titled **Copy of <name>**, and you
-are taken to it. Duplicate the first of ten sub-pages and the copy appears
+the **end of the same list** as the original, titled **Copy of <name>** in the
+language of whoever made it (a page without a title gives a copy without one),
+and you are taken to it. Duplicate the first of ten sub-pages and the copy appears
 tenth, not second.
 
 Only the parts you are allowed to read are copied. A branch you cannot see is

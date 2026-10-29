@@ -582,8 +582,11 @@ var mcpTools = []map[string]any{
 		"annotations": adds,
 		"description": "Duplicate a page and its entire sub-tree (a deep copy placed next to the original). Returns the new page id.",
 		"inputSchema": map[string]any{"type": "object",
-			"properties": map[string]any{"page_id": map[string]any{"type": "string"}},
-			"required":   []string{"page_id"}},
+			"properties": map[string]any{
+				"page_id": map[string]any{"type": "string"},
+				"title":   map[string]any{"type": "string", "description": "What to call the copy. Without it the copy is called \"Copy of\" and the original's title, in English; pass a title in the workspace's language when that is not English."},
+			},
+			"required": []string{"page_id"}},
 	},
 }
 
@@ -1284,7 +1287,10 @@ func (s *Server) mcpCall(u *user, name string, rawArgs json.RawMessage, publicBa
 			}
 			return s.mcpCreateDatabase(u, args.Title, parentID, args.WorkspaceID, sch)
 		case "duplicate_page":
-			nid, err := s.duplicatePage(args.PageID, userID, false, false)
+			if len([]rune(args.Title)) > maxTitleLen {
+				return "", fmt.Errorf("title is too long")
+			}
+			nid, err := s.duplicatePage(args.PageID, userID, false, false, strings.TrimSpace(args.Title))
 			if err != nil {
 				return "", err
 			}

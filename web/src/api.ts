@@ -365,10 +365,12 @@ export const api = {
   // fromTemplate: instantiate a template (copy keeps the title).
   // asTemplate: save as template — the COPY becomes the template (snapshot),
   // the original stays a normal page.
-  duplicatePage: (id: string, fromTemplate = false, asTemplate = false) =>
+  // title: what to call the copy, in the reader's language (the server's own
+  // default is English).
+  duplicatePage: (id: string, fromTemplate = false, asTemplate = false, title = '') =>
     req<{ id: string }>(
       `/api/pages/${id}/duplicate${fromTemplate ? '?fromTemplate=1' : asTemplate ? '?asTemplate=1' : ''}`,
-      { method: 'POST' },
+      { method: 'POST', ...(title ? { body: JSON.stringify({ title }) } : {}) },
     ),
   importMarkdown: (parentId: string | null, title: string, markdown: string) =>
     req<{ id: string }>('/api/import', {

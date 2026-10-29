@@ -27,7 +27,7 @@ func TestViewerCannotCreateRootPageOrInstantiateTemplate(t *testing.T) {
 	if _, err := s.mcpCreateFromTemplate(&user{ID: viewer}, tpl, "Forbidden copy"); err == nil {
 		t.Error("viewer instantiated a template in a read-only workspace")
 	}
-	if _, err := s.duplicatePage(tpl, viewer, true, false); err == nil {
+	if _, err := s.duplicatePage(tpl, viewer, true, false, ""); err == nil {
 		t.Error("duplicate accepted a viewer")
 	}
 	s.db.Exec(`UPDATE workspace_members SET role = 'member' WHERE workspace_id = ? AND user_id = ?`, ws, viewer)

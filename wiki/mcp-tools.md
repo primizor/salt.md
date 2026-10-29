@@ -529,8 +529,12 @@ Errors: `unknown mode "x" — use append (the default), prepend or replace`;
 | Parameter | Type | Required |
 | --- | --- | --- |
 | `page_id` | string | yes |
+| `title` | string | no |
 
-A deep copy of the page and its sub-tree, placed next to the original.
+A deep copy of the page and its sub-tree, placed next to the original. Without
+`title` the copy is called *Copy of* and the original's title, in English, and a
+page without a title gives a copy without one. Pass a title in the workspace's
+language when that is not English.
 
 **It copies only the parts you may read.** A private sub-page belonging to
 somebody else is left out, and everything below it goes with it. That is not a

@@ -92,7 +92,7 @@ func (s *Server) mcpCreateFromTemplate(u *user, templateID, title string) (strin
 	if isTemplate == 0 {
 		return "", fmt.Errorf("page %q is not a template — call list with kind=\"templates\", or duplicate_page for an ordinary copy", templateID)
 	}
-	nid, err := s.duplicatePage(templateID, u.ID, true, false)
+	nid, err := s.duplicatePage(templateID, u.ID, true, false, "")
 	if err == sql.ErrNoRows {
 		return "", fmt.Errorf("template %q not found", templateID)
 	}
@@ -118,7 +118,7 @@ func (s *Server) mcpSaveAsTemplate(u *user, pageID string) (string, error) {
 	if !s.canWrite(u.ID, pageID) {
 		return "", fmt.Errorf("page %q not found", pageID)
 	}
-	nid, err := s.duplicatePage(pageID, u.ID, false, true)
+	nid, err := s.duplicatePage(pageID, u.ID, false, true, "")
 	if err == sql.ErrNoRows {
 		return "", fmt.Errorf("page %q not found", pageID)
 	}

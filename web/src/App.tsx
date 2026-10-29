@@ -1009,14 +1009,15 @@ export default function App() {
   const duplicatePage = useCallback(
     async (id: string) => {
       try {
-        const r = await api.duplicatePage(id);
+        const title = pages?.find((p) => p.id === id)?.title ?? '';
+        const r = await api.duplicatePage(id, false, false, title ? t('Copy of {title}', { title }) : '');
         await loadPages();
         navigate(r.id);
       } catch {
         toast(t('Could not be duplicated'));
       }
     },
-    [loadPages, navigate],
+    [pages, loadPages, navigate],
   );
 
   const restorePage = useCallback(

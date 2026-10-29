@@ -305,10 +305,10 @@ func TestBoardOnADeletedPropertySaysWhatToPass(t *testing.T) {
 func TestSlugIDSpellsOutLatinAccentsAndKeepsExistingOptionIDs(t *testing.T) {
 	taken := map[string]bool{}
 	cases := map[string]string{
-		"Acción":                "accion",
-		"Diseño — Revisión":     "diseno-revision",
-		"Año de Publicación":    "ano-de-publicacion",
-		"Ça marche / Español":   "ca-marche-espanol",
+		"Acción":              "accion",
+		"Diseño — Revisión":   "diseno-revision",
+		"Año de Publicación":  "ano-de-publicacion",
+		"Ça marche / Español": "ca-marche-espanol",
 	}
 	for input, want := range cases {
 		if got := slugID(input, taken); got != want {
@@ -349,4 +349,3 @@ func TestSlugIDSpellsOutLatinAccentsAndKeepsExistingOptionIDs(t *testing.T) {
 		t.Errorf("new accented option id = %v, want validacion", third["id"])
 	}
 }
-

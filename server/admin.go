@@ -157,39 +157,39 @@ type appSettings struct {
 
 func (s *Server) loadSettings() appSettings {
 	res := appSettings{
-		InstanceName:        s.setting("instance_name", ""),
-		SignupMode:          s.setting("signup_mode", "invite"),
-		AllowedDomains:      s.setting("allowed_domains", ""),
+		InstanceName:             s.setting("instance_name", ""),
+		SignupMode:               s.setting("signup_mode", "invite"),
+		AllowedDomains:           s.setting("allowed_domains", ""),
 		AllowUserWorkspaces:      s.setting("allow_user_workspaces", "1") != "0",
 		CreatePersonalWorkspaces: s.setting("create_personal_workspaces", "1") != "0",
-		SMTPHost:            s.setting("smtp_host", ""),
-		SMTPPort:            s.setting("smtp_port", "587"),
-		SMTPUser:            s.setting("smtp_user", ""),
-		SMTPFrom:            s.setting("smtp_from", ""),
-		SMTPPassSet:         s.setting("smtp_pass", "") != "",
-		PublicBaseURL:       s.setting("public_base_url", ""),
-		TrustProxy:          s.boolSetting("trust_proxy"),
-		MaxUploadMB:         s.intSetting("max_upload_mb", 50, 1, 2048),
-		TrashDays:           s.trashRetentionDays(),
-		AuditDays:           s.auditRetentionDays(),
-		PdfCover:            s.boolSetting("pdf_cover"),
-		PdfIcon:             s.setting("pdf_icon", "1") == "1",
-		PdfFooter:           s.setting("pdf_footer", "1") == "1",
-		PdfWorkspace:        s.setting("pdf_workspace", "1") == "1",
-		PdfPageNums:         s.setting("pdf_pagenums", "1") == "1",
-		PdfComments:         s.boolSetting("pdf_comments"),
-		PdfLinks:            s.setting("pdf_links", "1") == "1",
-		PdfLandscape:        s.boolSetting("pdf_landscape"),
-		SessionDays:         s.sessionDays(),
-		HTTPSDomain:         s.setting("https_domain", ""),
-		HTTPSEnabled:        s.boolSetting("https_enabled"),
-		GoogleClientID:      s.setting("oauth_google_id", ""),
-		GoogleSecretSet:     s.setting("oauth_google_secret", "") != "",
-		MSClientID:          s.setting("oauth_ms_id", ""),
-		MSSecretSet:         s.setting("oauth_ms_secret", "") != "",
-		AgentAddressesOn:    s.boolSetting(settingAgentAddressesOn),
-		AgentAddresses:      s.setting(settingAgentAddresses, ""),
-		AnthropicAddresses:  anthropicOutbound,
+		SMTPHost:                 s.setting("smtp_host", ""),
+		SMTPPort:                 s.setting("smtp_port", "587"),
+		SMTPUser:                 s.setting("smtp_user", ""),
+		SMTPFrom:                 s.setting("smtp_from", ""),
+		SMTPPassSet:              s.setting("smtp_pass", "") != "",
+		PublicBaseURL:            s.setting("public_base_url", ""),
+		TrustProxy:               s.boolSetting("trust_proxy"),
+		MaxUploadMB:              s.intSetting("max_upload_mb", 50, 1, 2048),
+		TrashDays:                s.trashRetentionDays(),
+		AuditDays:                s.auditRetentionDays(),
+		PdfCover:                 s.boolSetting("pdf_cover"),
+		PdfIcon:                  s.setting("pdf_icon", "1") == "1",
+		PdfFooter:                s.setting("pdf_footer", "1") == "1",
+		PdfWorkspace:             s.setting("pdf_workspace", "1") == "1",
+		PdfPageNums:              s.setting("pdf_pagenums", "1") == "1",
+		PdfComments:              s.boolSetting("pdf_comments"),
+		PdfLinks:                 s.setting("pdf_links", "1") == "1",
+		PdfLandscape:             s.boolSetting("pdf_landscape"),
+		SessionDays:              s.sessionDays(),
+		HTTPSDomain:              s.setting("https_domain", ""),
+		HTTPSEnabled:             s.boolSetting("https_enabled"),
+		GoogleClientID:           s.setting("oauth_google_id", ""),
+		GoogleSecretSet:          s.setting("oauth_google_secret", "") != "",
+		MSClientID:               s.setting("oauth_ms_id", ""),
+		MSSecretSet:              s.setting("oauth_ms_secret", "") != "",
+		AgentAddressesOn:         s.boolSetting(settingAgentAddressesOn),
+		AgentAddresses:           s.setting(settingAgentAddresses, ""),
+		AnthropicAddresses:       anthropicOutbound,
 	}
 	res.MailProvider, res.MailAddress = s.mailProviderConfigured()
 	res.MailFrom = s.setting("mail_from_override", "")
@@ -210,39 +210,39 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		InstanceName        *string `json:"instanceName"`
-		SignupMode          *string `json:"signupMode"`
-		AllowedDomains      *string `json:"allowedDomains"`
-		SMTPHost            *string `json:"smtpHost"`
-		SMTPPort            *string `json:"smtpPort"`
-		SMTPUser            *string `json:"smtpUser"`
-		SMTPFrom            *string `json:"smtpFrom"`
-		SMTPPass            *string `json:"smtpPass"` // "" leaves unchanged; sentinel clears
-		PublicBaseURL       *string `json:"publicBaseUrl"`
-		TrustProxy          *bool   `json:"trustProxy"`
-		MaxUploadMB         *int    `json:"maxUploadMb"`
-		TrashDays           *int    `json:"trashDays"`
-		AuditDays           *int    `json:"auditDays"`
-		PdfCover            *bool   `json:"pdfCover"`
-		PdfIcon             *bool   `json:"pdfIcon"`
-		PdfFooter           *bool   `json:"pdfFooter"`
-		PdfWorkspace        *bool   `json:"pdfWorkspace"`
-		PdfPageNums         *bool   `json:"pdfPageNums"`
-		PdfComments         *bool   `json:"pdfComments"`
-		PdfLinks            *bool   `json:"pdfLinks"`
-		PdfLandscape        *bool   `json:"pdfLandscape"`
-		SessionDays         *int    `json:"sessionDays"`
-		HTTPSDomain         *string `json:"httpsDomain"`
-		HTTPSEnabled        *bool   `json:"httpsEnabled"`
-		MailFrom            *string `json:"mailFrom"`
-		GoogleClientID      *string `json:"googleClientId"`
-		GoogleSecret        *string `json:"googleClientSecret"`
-		MSClientID          *string `json:"msClientId"`
-		MSSecret            *string `json:"msClientSecret"`
+		InstanceName             *string `json:"instanceName"`
+		SignupMode               *string `json:"signupMode"`
+		AllowedDomains           *string `json:"allowedDomains"`
+		SMTPHost                 *string `json:"smtpHost"`
+		SMTPPort                 *string `json:"smtpPort"`
+		SMTPUser                 *string `json:"smtpUser"`
+		SMTPFrom                 *string `json:"smtpFrom"`
+		SMTPPass                 *string `json:"smtpPass"` // "" leaves unchanged; sentinel clears
+		PublicBaseURL            *string `json:"publicBaseUrl"`
+		TrustProxy               *bool   `json:"trustProxy"`
+		MaxUploadMB              *int    `json:"maxUploadMb"`
+		TrashDays                *int    `json:"trashDays"`
+		AuditDays                *int    `json:"auditDays"`
+		PdfCover                 *bool   `json:"pdfCover"`
+		PdfIcon                  *bool   `json:"pdfIcon"`
+		PdfFooter                *bool   `json:"pdfFooter"`
+		PdfWorkspace             *bool   `json:"pdfWorkspace"`
+		PdfPageNums              *bool   `json:"pdfPageNums"`
+		PdfComments              *bool   `json:"pdfComments"`
+		PdfLinks                 *bool   `json:"pdfLinks"`
+		PdfLandscape             *bool   `json:"pdfLandscape"`
+		SessionDays              *int    `json:"sessionDays"`
+		HTTPSDomain              *string `json:"httpsDomain"`
+		HTTPSEnabled             *bool   `json:"httpsEnabled"`
+		MailFrom                 *string `json:"mailFrom"`
+		GoogleClientID           *string `json:"googleClientId"`
+		GoogleSecret             *string `json:"googleClientSecret"`
+		MSClientID               *string `json:"msClientId"`
+		MSSecret                 *string `json:"msClientSecret"`
 		AllowUserWorkspaces      *bool   `json:"allowUserWorkspaces"`
 		CreatePersonalWorkspaces *bool   `json:"createPersonalWorkspaces"`
-		AgentAddressesOn    *bool   `json:"agentAddressesOn"`
-		AgentAddresses      *string `json:"agentAddresses"`
+		AgentAddressesOn         *bool   `json:"agentAddressesOn"`
+		AgentAddresses           *string `json:"agentAddresses"`
 	}
 	if err := decodeJSON(w, r, &body); err != nil {
 		httpError(w, 400, "invalid JSON")

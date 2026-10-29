@@ -1,7 +1,9 @@
 package server
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -79,6 +81,14 @@ func (s *Server) handleAdminBackup(w http.ResponseWriter, r *http.Request) {
 	defer os.Remove(tmpPath)
 	// Backup opens its own read connection — safe alongside the live pool (WAL).
 	if err := Backup(s.dataDir, tmpPath); err != nil {
+		// An archive with files missing is not handed out: the download would
+		// look complete. The log names the files, so they can be fixed.
+		log.Printf("backup: %v", err)
+		var gap *BackupIncomplete
+		if errors.As(err, &gap) {
+			httpErrorCode(w, 500, "backup_incomplete", "Some uploaded files could not be read, so the backup would be incomplete. The server log names them.")
+			return
+		}
 		httpError(w, 500, "backup failed: "+err.Error())
 		return
 	}

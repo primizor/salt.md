@@ -60,6 +60,8 @@ export function serverMessage(code: string, fallback: string, data?: ErrorData):
     // ---- the owner role ----
     case 'owner_only_backup':
       return t('Only the owner can download an instance backup. It contains every workspace.');
+    case 'backup_incomplete':
+      return t('Some uploaded files could not be read, so the backup would be incomplete. The server log names them.');
     case 'owner_cannot_be_disabled':
       return t('The owner cannot be deactivated. Hand the owner role on first.');
     case 'owner_cannot_be_deleted':

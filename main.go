@@ -41,6 +41,11 @@ func main() {
 				dest = os.Args[2]
 			}
 			if err := server.Backup(dataDir, dest); err != nil {
+				// Still a non-zero exit: a cron job has to notice the gap.
+				var gap *server.BackupIncomplete
+				if errors.As(err, &gap) {
+					log.Fatalf("backup written to %s, but incomplete: %v", dest, err)
+				}
 				log.Fatalf("backup: %v", err)
 			}
 			fmt.Printf("Backup written to %s\n", dest)

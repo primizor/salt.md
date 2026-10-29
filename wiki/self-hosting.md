@@ -515,6 +515,15 @@ This is **safe against a running instance**: it opens its own read connection,
 which WAL mode allows. That makes it a cron job rather than an outage. The admin
 dialog says the same: *"For automatic backups, run `./salt backup` from cron."*
 
+**Check its exit status.** A file under `files/` that cannot be read (wrong
+owner, mode 000) is left out, everything else still goes into the archive, and
+the command ends with status 1 and names the file: *"backup written to …, but
+incomplete: 1 file(s) could not be read and are not in the archive:
+files/…"*. Any other failure, a full disk for one, removes the half-written
+archive and also ends with status 1. Only a complete archive prints *"Backup
+written to …"* and exits 0. The download in the admin dialog refuses an
+incomplete archive instead and writes the file names to the server log.
+
 Watch the free space on the **destination** filesystem. The snapshot is written
 uncompressed next to the destination as `<destination>.db.tmp` first and only
 then packed, so you need room for the whole database on top of the finished

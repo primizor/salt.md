@@ -716,7 +716,7 @@ func (s *Server) handleWorkspaceRules(w http.ResponseWriter, r *http.Request) {
 		httpError(w, 500, err.Error())
 		return
 	}
-	s.pagesChanged()
+	s.workspaceChanged(wsID)
 	detail := ""
 	if hadProposal != "" {
 		detail = "settled a pending proposal"
@@ -742,7 +742,7 @@ func (s *Server) handleDismissRulesProposal(w http.ResponseWriter, r *http.Reque
 		httpError(w, 500, err.Error())
 		return
 	}
-	s.pagesChanged()
+	s.workspaceChanged(wsID)
 	s.audit("human", requestUser(r).ID, requestUser(r).Name, "workspace_rules_proposal_dismissed", "", wsID, "")
 	writeJSON(w, map[string]bool{"ok": true})
 }

@@ -1131,7 +1131,7 @@
   "This copy was installed on the system, not by salt.md, so it is updated by whatever installed it.": "Diese Kopie wurde auf dem System installiert, nicht von salt.md, und wird dort aktualisiert, wo sie herkommt.",
   "Keep it up to date automatically (checked daily, checksum verified)": "Automatisch aktuell halten (täglich geprüft, mit Prüfsumme)",
   "Check now": "Jetzt prüfen",
-  "This item does not match the filter, so it is not shown here.": "Dieses Element entspricht nicht dem Filter und wird hier deshalb nicht angezeigt.",
+  "The new row does not match this view's filters, so it is not shown here.": "Die neue Zeile passt nicht zu den Filtern dieser Ansicht und wird hier deshalb nicht angezeigt.",
   "Some uploaded files could not be read, so the backup would be incomplete. The server log names them.": "Einige hochgeladene Dateien konnten nicht gelesen werden, die Sicherung wäre also unvollständig. Das Server-Protokoll nennt sie.",
   "Written by an agent through this account": "Von einem Agenten über dieses Konto geschrieben",
   "Agent": "Agent"

@@ -33,7 +33,7 @@ await withFixture(async ({ page, api, base, workspace, path }) => {
   await page.getByRole('button', { name: 'New', exact: true }).click();
   await eventually(async () => (await rows()).length === old.length + 1);
   assert.equal((await rows()).find(row => !old.includes(row.id)).props.status, undefined);
-  await page.locator('.toast').filter({ hasText: 'This item does not match the filter, so it is not shown here.' }).waitFor();
+  await page.locator('.toast').filter({ hasText: "The new row does not match this view's filters, so it is not shown here." }).waitFor();
   // An explicit empty board column must override a conflicting filter.
   config.views[1].filters = [{ property: 'status', op: 'is', value: 'todo' }];
   await api('PUT', path, { views: config.views });

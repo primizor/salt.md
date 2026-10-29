@@ -1140,7 +1140,7 @@
   "Check now": "Comprobar ahora",
   "Public link": "Enlace público",
   "Copy failed; select the link": "No se pudo copiar; selecciona el enlace",
-  "This item does not match the filter, so it is not shown here.": "Este elemento no coincide con el filtro, por lo que no se muestra aquí.",
+  "The new row does not match this view's filters, so it is not shown here.": "La nueva fila no coincide con los filtros de esta vista, por eso no se muestra aquí.",
   "Some uploaded files could not be read, so the backup would be incomplete. The server log names them.": "Algunos archivos subidos no se pudieron leer, así que la copia de seguridad quedaría incompleta. El registro del servidor los nombra.",
   "Written by an agent through this account": "Escrito por un agente a través de esta cuenta",
   "Agent": "Agente"

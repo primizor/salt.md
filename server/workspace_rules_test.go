@@ -405,8 +405,8 @@ func TestProposeRulesNotifiesSubscribers(t *testing.T) {
 	}
 	select {
 	case ev := <-ch:
-		if !strings.Contains(ev, `"pages"`) {
-			t.Errorf("propose event = %q, want pages notification", ev)
+		if !strings.Contains(ev, `"workspaces"`) {
+			t.Errorf("propose event = %q, want a workspaces notification", ev)
 		}
 	default:
 		t.Error("propose_workspace_rules emitted no SSE event")
@@ -417,8 +417,8 @@ func TestProposeRulesNotifiesSubscribers(t *testing.T) {
 	}
 	select {
 	case ev := <-ch:
-		if !strings.Contains(ev, `"pages"`) {
-			t.Errorf("withdraw event = %q, want pages notification", ev)
+		if !strings.Contains(ev, `"workspaces"`) {
+			t.Errorf("withdraw event = %q, want a workspaces notification", ev)
 		}
 	default:
 		t.Error("withdrawing rules proposal emitted no SSE event")

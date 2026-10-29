@@ -652,6 +652,9 @@ export default function App() {
           window.clearTimeout(reloadTimer.current);
           reloadTimer.current = window.setTimeout(() => void loadPages(), 250);
         }
+        // A workspace's settings moved (a rules proposal, say): the list holds
+        // them, and an open settings dialog reads from it.
+        if (msg.type === 'workspaces') void loadWorkspaces();
         // A database's rows moved. Passed on as a DOM event rather than through
         // props: only the open CollectionView cares, and only when it is the
         // database named here. Reloading every open view on every event is what

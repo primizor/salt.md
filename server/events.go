@@ -86,6 +86,14 @@ func (s *Server) pagesChanged() {
 	s.events.broadcast(`{"type":"pages"}`)
 }
 
+// workspaceChanged tells the members of a workspace that its settings moved,
+// a rules proposal arriving say, so an open browser fetches its workspace list
+// again. Content-free like pagesChanged, and addressed, because only members
+// keep that workspace in their list.
+func (s *Server) workspaceChanged(ws string) {
+	s.events.broadcastTo(`{"type":"workspaces"}`, s.inWorkspace(ws))
+}
+
 // rowsChanged tells the members of a workspace that one database's rows moved.
 //
 // It names the database, which is why it is addressed rather than broadcast.

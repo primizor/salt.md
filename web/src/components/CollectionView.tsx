@@ -1,7 +1,7 @@
-import { collectionDefaults } from '../collectionDefaults';
-import { filterIsArmed, filterValues, matchesFilter } from '../collectionFilters';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api';
+import { collectionDefaults } from '../collectionDefaults';
+import { filterIsArmed, filterValues, matchesFilter } from '../collectionFilters';
 import { onRefresh } from '../pwa';
 import Portal from './Portal';
 import { useBoardDrag } from '../boardDrag';
@@ -154,10 +154,12 @@ function groupValueFor(schema: PropDef[], propId: string, optId: string): unknow
 // Apply a view's filters and sort to the row set.
 function applyView(rows: Row[], view: ViewDef, schema: PropDef[]): Row[] {
   const dateProps = new Set(schema.filter((p) => p.type === 'date').map((p) => p.id));
+  const numberProps = new Set(schema.filter((p) => p.type === 'number').map((p) => p.id));
   let out = rows;
   for (const f of view.filters ?? []) {
     const isDate = dateProps.has(f.property);
-    out = out.filter((r) => matchesFilter(r, f, isDate, schema.some((p) => p.id === f.property && p.type === 'number')));
+    const isNumber = numberProps.has(f.property);
+    out = out.filter((r) => matchesFilter(r, f, isDate, isNumber));
   }
   const sort = view.sort;
   if (sort) {
@@ -450,7 +452,7 @@ export default function CollectionView({ collectionId, pages, tagColors, onNavig
     const props = collectionDefaults(schema, filters, presetProps);
     await api.createPage(collectionId, '', 'doc', props);
     if (filters.some((f) => !matchesFilter({ props }, f, schema.some((p) => p.id === f.property && p.type === 'date'), schema.some((p) => p.id === f.property && p.type === 'number')))) {
-      toast(t('This item does not match the filter, so it is not shown here.'));
+      toast(t("The new row does not match this view's filters, so it is not shown here."));
     }
     onPagesChanged();
   };

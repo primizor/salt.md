@@ -306,11 +306,14 @@ configures the current view sits on the right, in this order:
 | **⋯** (*View options*) | Rename, move and remove this view. |
 | **＋ New** | Creates an *Untitled* row and keeps you in the view; a click opens it. Every view except a form has it. |
 
-When you create an item in a filtered view, filters that determine one value
-supply its initial properties. Alternatives are left empty. Explicit choices,
-such as a board column, take precedence; relative dates resolve to a stored day.
-If the new item does not match the filters, a message explains why it is hidden.
-The same rule applies to an embedded collection using its own filters.
+A row made in a filtered view starts with the values its filters fix: in a view
+filtered to *Status is Done*, **New** makes a row whose status is Done. A filter
+that allows several values (*is any of*) leaves the property empty rather than
+picking one, a board column's value always wins (the *No …* column's empty one
+included), and a relative day like *today* is stored as that day's date. If the
+new row still does not match the filters, a message says so: *"The new row does
+not match this view's filters, so it is not shown here."* An embedded collection
+does the same with its own filters.
 
 **Filter**, **Sort**, **Group** and **Columns** light up in the accent colour as
 soon as anything is set, so you can see that a view is filtered without opening

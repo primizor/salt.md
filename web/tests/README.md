@@ -48,3 +48,7 @@ People covers a person property with several people and a list of who can be
 picked (#11): only those are offered, nobody else can be typed in, the list
 stays open for several picks, the setting is in the Properties dialog, and a
 row holding several keeps them until somebody picks one after a switch back.
+
+Filtered creation covers persisted filter defaults, keeping the collection open,
+creation from an embedded collection, and leaving ambiguous alternatives empty
+with an explanation when the new row falls outside the view.

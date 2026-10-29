@@ -1128,5 +1128,6 @@
   "That is the newest release.": "Das ist die neueste Version.",
   "This copy was installed on the system, not by salt.md, so it is updated by whatever installed it.": "Diese Kopie wurde auf dem System installiert, nicht von salt.md, und wird dort aktualisiert, wo sie herkommt.",
   "Keep it up to date automatically (checked daily, checksum verified)": "Automatisch aktuell halten (täglich geprüft, mit Prüfsumme)",
-  "Check now": "Jetzt prüfen"
+  "Check now": "Jetzt prüfen",
+  "This item does not match the filter, so it is not shown here.": "Dieses Element entspricht nicht dem Filter und wird hier deshalb nicht angezeigt."
 }

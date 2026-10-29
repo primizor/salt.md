@@ -1137,5 +1137,6 @@
   "Keep it up to date automatically (checked daily, checksum verified)": "Mantenerlo actualizado automáticamente (se comprueba a diario, con suma de verificación)",
   "Check now": "Comprobar ahora",
   "Public link": "Enlace público",
-  "Copy failed; select the link": "No se pudo copiar; selecciona el enlace"
+  "Copy failed; select the link": "No se pudo copiar; selecciona el enlace",
+  "This item does not match the filter, so it is not shown here.": "Este elemento no coincide con el filtro, por lo que no se muestra aquí."
 }

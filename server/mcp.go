@@ -102,10 +102,43 @@ func wrapWorkspaceRules(rules string) string {
 // somebody forgets here is refused to a read-only token, which is a bug
 // report rather than a hole. TestReadOnlyTokenWritesNothing walks the whole
 // catalogue.
+//
+// The same list sets every tool's readOnlyHint (see init below), so what a
+// client is told a tool does and what a read-only token may call can't
+// disagree.
 var readTools = map[string]bool{
 	"list": true, "search": true, "get_page": true, "query_rows": true,
 	"get_collection": true, "get_links": true, "whoami": true,
 	"get_workspace": true, "get_permissions": true, "get_import_status": true,
+}
+
+// The MCP annotations of the writing tools. readOnlyHint is not among them:
+// init takes it from readTools. destructiveHint is stated on every one,
+// because a client that finds none assumes the tool destroys.
+var (
+	adds       = map[string]any{"destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+	sets       = map[string]any{"destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	overwrites = map[string]any{"destructiveHint": true, "idempotentHint": false, "openWorldHint": false}
+	removes    = map[string]any{"destructiveHint": true, "idempotentHint": true, "openWorldHint": false}
+	fetches    = map[string]any{"destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+)
+
+// init gives every tool its readOnlyHint from readTools. A read tool declares
+// nothing in the catalogue; a writing tool gets a copy of its set, so the
+// shared sets above stay as they are.
+func init() {
+	for _, t := range mcpTools {
+		if readTools[t["name"].(string)] {
+			t["annotations"] = map[string]any{"readOnlyHint": true, "openWorldHint": false}
+			continue
+		}
+		a := map[string]any{"readOnlyHint": false}
+		declared, _ := t["annotations"].(map[string]any)
+		for k, v := range declared {
+			a[k] = v
+		}
+		t["annotations"] = a
+	}
 }
 
 // isMCPTool reports whether the catalogue has a tool of that name.
@@ -148,7 +181,8 @@ var mcpTools = []map[string]any{
 			"required": []string{"page_id"}},
 	},
 	{
-		"name": "create_page",
+		"name":        "create_page",
+		"annotations": adds,
 		"description": "Create a new page, optionally under a parent and with initial Markdown content. " +
 			"Cover, tags and description can be set right here — a page created without them is a page " +
 			"nobody goes back to finish.",
@@ -168,7 +202,8 @@ var mcpTools = []map[string]any{
 			"required": []string{"title"}},
 	},
 	{
-		"name": "update_page",
+		"name":        "update_page",
+		"annotations": sets,
 		"description": "Update a page's metadata: title, icon, cover, description, tags, visibility — and where it sits. " +
 			"parent_id moves it under another page (empty string moves it to the top level), workspace_id moves it and its whole sub-tree into another workspace, " +
 			"and favorite pins it in the sidebar. Only the fields you pass are changed. Tags replace the whole list — call list with kind=\"tags\" first and " +
@@ -189,7 +224,8 @@ var mcpTools = []map[string]any{
 			"required": []string{"page_id"}},
 	},
 	{
-		"name": "save_as_template",
+		"name":        "save_as_template",
+		"annotations": adds,
 		"description": "Save an existing page (with its subtree) as a template. This SNAPSHOTS it: " +
 			"the copy becomes the template and the page stays a normal page, so later edits to it " +
 			"do not change what the template offers.",
@@ -199,6 +235,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "upload_file",
+		"annotations": adds,
 		"description": "Upload a file (e.g. a PDF) from base64 data. If page_id is given, the file is attached to that page as a block; PDF text becomes searchable.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -227,6 +264,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "set_properties",
+		"annotations": sets,
 		"description": "Set typed property values on a database row (a page that is a child of a database). Only the given properties are changed (field-level merge); set a value to null to clear it. Use get_collection first for property ids and select option ids.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -237,6 +275,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "create_database",
+		"annotations": adds,
 		"description": "Create a new database (collection) page with a property schema. schema is an array of {id,name,type,...} property definitions (types: " + propTypeList() + "). If omitted, a default Status board is created.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -257,6 +296,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "update_schema",
+		"annotations": adds,
 		"description": "Add or change properties on a database. MERGES — properties you do not mention stay untouched. Pass an existing id to change that property, omit the id to add a new one. Removing a property keeps the values in the rows, so re-adding it brings them back.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -269,6 +309,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "delete_view",
+		"annotations": removes,
 		"description": "Delete a view from a database. The last remaining view cannot be deleted.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -279,6 +320,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "create_rows",
+		"annotations": adds,
 		"description": "Create many database rows in ONE call (max 200) instead of one call per row. Each row: {title, icon?, properties?}. Call get_collection first for property ids.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -300,6 +342,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "delete_comment",
+		"annotations": removes,
 		"description": "Delete a comment permanently.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{"comment_id": map[string]any{"type": "string"}},
@@ -307,6 +350,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "write_content",
+		"annotations": overwrites,
 		"description": "Write Markdown into a page. mode: append (the default — adds at the end) | prepend (adds at the top) | replace (replaces the whole body). " + pageLinkHint + " " + diagramHint,
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -318,6 +362,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "revisions",
+		"annotations": overwrites,
 		"description": "A page's history. action: list (the default — every revision with author, time, and whether a HUMAN or an AGENT made it) | get (one older state as Markdown) | restore (put the page back to it). Restoring saves the CURRENT state as a new revision first, so it is itself reversible.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -330,6 +375,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "comments",
+		"annotations": adds,
 		"description": "Comments on a page. action: list (the default) | add | resolve | reopen. Deleting has its own tool, deliberately — it should be a choice, not an enum value you land on by mistake.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -343,6 +389,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "set_sharing",
+		"annotations": overwrites,
 		"description": "Turn a page's public read-only link on or off. public=true mints a link anyone can open WITHOUT signing in, so only do it when the user asked; sharing again replaces the previous link. public=false revokes it.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -355,6 +402,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "set_trashed",
+		"annotations": sets,
 		"description": "Move a page to the trash, or bring it back. Both directions are reversible — the page keeps existing — which is why this is one tool and not two. It takes the whole sub-tree with it.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -377,6 +425,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "set_view",
+		"annotations": adds,
 		"description": "Create a view on a database, or change one. Without view_id it creates (type is then required); with view_id it MERGES into the existing view — what you do not pass stays as it is. A board needs group_by (a select, a multiselect or a relation property; a row with several tags appears under each of them); a calendar and a timeline need date_prop. A view's type cannot be changed: delete it and create the new one. Call get_collection for the ids.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -395,6 +444,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "workspace",
+		"annotations": adds,
 		"description": "Create a workspace, or rename one. Without workspace_id it creates and you become its admin; with one it renames it or sets its icon — workspace admins only. Pass from_workspace to start from an existing one's STRUCTURE instead of from nothing: its rules, its databases, their property schemas with the option ids, and their views — but no rows and no documents. There is no separate template object on purpose; the workspace you point at is the blueprint, so it cannot drift out of step with how you actually work. Use update_page with workspace_id afterwards to move existing pages into it.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -405,7 +455,8 @@ var mcpTools = []map[string]any{
 			}},
 	},
 	{
-		"name": "working_on",
+		"name":        "working_on",
+		"annotations": sets,
 		"description": "Say that you are working on a page, so a person watching sees it live — and say when you are done. " +
 			"Check in BEFORE you start on something that takes a while (a task from a board, a document you are rewriting), and call it again with done: true when you finish. " +
 			"You stay listed until you check out: nothing expires on you halfway through a long job, and every other call you make on that page counts as a sign of life. " +
@@ -423,7 +474,8 @@ var mcpTools = []map[string]any{
 			"required": []string{"page_id"}},
 	},
 	{
-		"name": "note",
+		"name":        "note",
+		"annotations": adds,
 		"description": "Drop a note on a page while you work — one line, no title, no place to choose. It joins that page's raw trail, in order, with the time you wrote it. " +
 			"Use it for what a write-up loses: the approach you tried and dropped, the thing that surprised you, the number you looked up, why you did NOT take the obvious road. Write it AS it happens; that is the whole value. " +
 			"A note can never be edited or removed, by you or anyone — that is what makes it worth reading later, because you wrote it before you knew how it would end. Correct a wrong one by adding another that says so. " +
@@ -451,6 +503,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "propose_workspace_rules",
+		"annotations": overwrites,
 		"description": "Submit a DRAFT of workspace rules (working conventions: naming, structure, where content goes, what to leave alone). Workspace admins only — the tool refuses a token whose account is not an admin of the workspace, so do not raise rules with a non-admin user at all. The draft never becomes active by itself: the admin reviews and applies it in the browser, and that review cannot be skipped over MCP. Only propose when the user asked for rules or agreed to your draft; keep them short and imperative. An empty string withdraws your own pending draft. A new draft replaces the pending one.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -468,6 +521,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "embed_database",
+		"annotations": adds,
 		"description": "Embed an existing database INTO a document, at the end of its content. The document keeps its own text above and below — use this instead of creating a separate intro page next to a database. Only a reference is stored: the database stays one object in one place, and the same database can appear in several documents.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -478,6 +532,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "import_url",
+		"annotations": fetches,
 		"description": "Bulk-import records from a JSON URL — Salt fetches and writes them itself, so NONE of the content passes through you. Use this instead of looping create_page/create_rows whenever there are more than ~20 records: a large source would otherwise exhaust your context long before the import finishes. Returns a job_id immediately; poll get_import_status. Only public hosts can be fetched. Example for a Trello board: {url: \"https://api.trello.com/1/boards/ID?cards=all&lists=all&key=K&token=T\", items: \"cards\", title: \"name\", markdown: \"desc\", database_id: \"...\", properties: {\"Status\": \"idList\", \"Due\": \"due\", \"Labels\": \"labels[].name\"}, resolve: {\"idList\": {from: \"lists\", match: \"id\", to: \"name\"}}}",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{
@@ -504,6 +559,7 @@ var mcpTools = []map[string]any{
 	},
 	{
 		"name":        "duplicate_page",
+		"annotations": adds,
 		"description": "Duplicate a page and its entire sub-tree (a deep copy placed next to the original). Returns the new page id.",
 		"inputSchema": map[string]any{"type": "object",
 			"properties": map[string]any{"page_id": map[string]any{"type": "string"}},

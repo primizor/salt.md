@@ -1063,7 +1063,7 @@ export default function PropertyValue({
     case 'person':
       return <PersonValue def={def} value={value} onChange={onChange} readOnly={readOnly} compact={compact} />;
     case 'text':
-    default:
+    default: {
       if (compact) return value ? <span className="prop-text-chip">{String(value)}</span> : null;
       if (ro || !editing) {
         return (
@@ -1075,19 +1075,43 @@ export default function PropertyValue({
           </span>
         );
       }
+      // A textarea, because a value can hold line breaks (an agent writes
+      // them, set_properties keeps them) and an <input> strips them from its
+      // value: clicking in and out used to save three lines as one (#108).
+      // Enter still saves, as it always has; Shift+Enter adds a line.
+      const text = value == null ? '' : String(value);
       return (
-        <input
-          className="prop-input"
+        <textarea
+          className="prop-input prop-textarea"
           autoFocus
-          defaultValue={(value as string) || ''}
+          rows={1}
+          defaultValue={text}
+          ref={(el) => el && fitHeight(el)}
+          onInput={(e) => fitHeight(e.currentTarget)}
           onBlur={(e) => {
             setEditing(false);
-            onChange!(e.target.value);
+            // Leaving without a change writes nothing, so the row does not
+            // count as edited.
+            if (e.target.value !== text) onChange!(e.target.value);
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              e.currentTarget.blur();
+            } else if (e.key === 'Escape') {
+              e.currentTarget.value = text;
+              e.currentTarget.blur();
+            }
           }}
         />
       );
+    }
   }
+}
+
+// A textarea as tall as what it holds, so editing a value does not hide its
+// second line behind a scrollbar.
+function fitHeight(el: HTMLTextAreaElement) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
 }

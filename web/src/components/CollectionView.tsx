@@ -363,6 +363,30 @@ export default function CollectionView({ collectionId, pages, tagColors, onNavig
   const view = view0;
   const schema = config?.schema ?? [];
 
+  // The open view's tab in sight (#113). A tab remembers its view, so a
+  // collection can open on one far along a strip that scrolls sideways on a
+  // phone, and the strip stayed at its start with nothing on screen saying
+  // which view was open. Only the strip moves: scrollIntoView would scroll the
+  // document as well, and pull a reader down to an embedded collection.
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const tab = toolbarRef.current?.querySelector<HTMLElement>('.view-tab.active');
+    // The nearest box that scrolls sideways: the toolbar on a phone, the strip
+    // of tabs where that is what scrolls.
+    let el = tab?.parentElement ?? null;
+    while (tab && el) {
+      if (el.scrollWidth > el.clientWidth) {
+        const box = el.getBoundingClientRect();
+        const r = tab.getBoundingClientRect();
+        if (r.left < box.left) el.scrollLeft -= box.left - r.left + 8;
+        else if (r.right > box.right) el.scrollLeft += r.right - box.right + 8;
+        break;
+      }
+      if (el === toolbarRef.current) break;
+      el = el.parentElement;
+    }
+  }, [view?.id, config?.views.length]);
+
   // The inner horizontal scroller (the board's columns, the wide table) keeps
   // its position per view, across tab switches and reloads. The vertical
   // scroll belongs to `.page-body` and is remembered beside it (see Editor).
@@ -625,7 +649,7 @@ export default function CollectionView({ collectionId, pages, tagColors, onNavig
   const dateProps = schema.filter((p) => p.type === 'date');
 
   const viewSwitcher = (
-    <div className="collection-toolbar">
+    <div className="collection-toolbar" ref={toolbarRef}>
       <div className="view-tabs">
         {config.views.map((v) => (
           <span key={v.id} className="view-tab-wrap">
@@ -857,6 +881,7 @@ export default function CollectionView({ collectionId, pages, tagColors, onNavig
         <BoardView
           rows={viewRows}
           schema={visibleSchema}
+          allProps={schema}
           groupBy={view.groupBy || schema.find((p) => p.type === 'select')?.id || ''}
           tagColors={tagColors}
           commentCounts={commentCounts}
@@ -1819,6 +1844,7 @@ function BoardCardProps({
 function BoardView({
   rows,
   schema,
+  allProps,
   groupBy,
   tagColors,
   commentCounts,
@@ -1831,7 +1857,13 @@ function BoardView({
   onAddInColumn,
 }: {
   rows: Row[];
+  /** What the cards show: the view's visible properties. */
   schema: PropDef[];
+  /** Every property, hidden ones included. The board looks its grouping
+      property up here: hiding it in a view takes it off the cards, where it
+      repeats the column heading anyway, and used to take the whole board with
+      it, which then asked for a select property to be created (#112). */
+  allProps: PropDef[];
   groupBy: string;
   tagColors: Record<string, string>;
   commentCounts: Record<string, number>;
@@ -1850,7 +1882,7 @@ function BoardView({
   // card so it survives a re-render, and forgotten on leaving the view — an
   // opened card is a glance, not a setting.
   const [openCards, setOpenCards] = useState<Set<string>>(new Set());
-  // Zeiger-basiertes Ziehen statt des ruckeligen nativen Drags (siehe boardDrag).
+  // Dragging by pointer rather than the jerky native drag (see boardDrag).
   const { drag, armedRow, startDrag, consumeClick } = useBoardDrag((rowId, toCol) =>
     onDrop(rowId, groupBy, toCol),
   );
@@ -1859,8 +1891,8 @@ function BoardView({
   // column heading and the cell always say the same thing.
   const [relColumns, setRelColumns] = useState<RelOption[]>([]);
   const groupTarget =
-    schema.find((p) => p.id === groupBy)?.type === 'relation'
-      ? (schema.find((p) => p.id === groupBy)?.relationCollection ?? '')
+    allProps.find((p) => p.id === groupBy)?.type === 'relation'
+      ? (allProps.find((p) => p.id === groupBy)?.relationCollection ?? '')
       : '';
   useEffect(() => {
     if (!groupTarget) {
@@ -1881,7 +1913,7 @@ function BoardView({
     document.addEventListener('pointerdown', onDown);
     return () => document.removeEventListener('pointerdown', onDown);
   }, [moveMenu]);
-  const prop = schema.find((p) => p.id === groupBy);
+  const prop = allProps.find((p) => p.id === groupBy);
   if (!prop || (prop.type !== 'select' && prop.type !== 'multiselect' && prop.type !== 'relation')) {
     return (
       <div className="board-empty">

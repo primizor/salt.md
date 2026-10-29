@@ -96,7 +96,10 @@ func stemLite(w string) string {
 //	                                     the keyboard often will not produce it
 //
 // The words stay AND-joined among themselves: whoever types two terms means
-// both.
+// both. The AND is spelled out: FTS5 joins two plain terms by a space, but it
+// refuses a group in parentheses next to another term without one, and that
+// refusal reached the user as "no results" for most searches of two words
+// (#107).
 func ftsMatch(q string) string {
 	var groups []string
 	for _, raw := range strings.Fields(foldQuery(q)) {
@@ -126,7 +129,7 @@ func ftsMatch(q string) string {
 			groups = append(groups, "("+strings.Join(alts, " OR ")+")")
 		}
 	}
-	return strings.Join(groups, " ")
+	return strings.Join(groups, " AND ")
 }
 
 // migrateSearchIndex rebuilds the full-text index when it comes from an older

@@ -446,7 +446,7 @@ func (s *Server) fetchUserinfo(uiURL, accessToken, fallbackName string) (email, 
 func (s *Server) oauthCreateUser(email, name string) (string, error) {
 	switch s.setting("signup_mode", "invite") {
 	case "open":
-		// erlaubt
+		// allowed
 	case "domain":
 		if !s.domainAllowsSelfSignup(email) {
 			return "", fmt.Errorf("this email address may not register here. Ask an admin for an invitation")

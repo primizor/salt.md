@@ -39,7 +39,7 @@ func (s *Server) mailProviderConfigured() (provider, address string) {
 	return p, s.setting("mail_oauth_address", "")
 }
 
-// ---- Admin-Consent-Flow ----
+// ---- Admin consent flow ----
 
 func (s *Server) handleMailOAuthStart(w http.ResponseWriter, r *http.Request) {
 	if !requestUser(r).IsAdmin {
@@ -266,7 +266,7 @@ func (s *Server) refreshedAccessToken(provider string) (string, error) {
 	return tok.AccessToken, nil
 }
 
-// rfc2047 encodes a header value (Umlaute im Betreff!).
+// rfc2047 encodes a header value (umlauts in a subject line!).
 func rfc2047(v string) string {
 	ascii := true
 	for _, r := range v {

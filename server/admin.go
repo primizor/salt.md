@@ -140,6 +140,7 @@ type appSettings struct {
 	GoogleSecretSet bool   `json:"googleSecretSet"`
 	MSClientID      string `json:"msClientId"`
 	MSSecretSet     bool   `json:"msSecretSet"`
+	MSTenant        string `json:"msTenant"` // "" = common, see oauthEndpoints
 	MailProvider    string `json:"mailProvider"`
 	MailAddress     string `json:"mailAddress"`
 	MailFrom        string `json:"mailFrom"`
@@ -187,6 +188,7 @@ func (s *Server) loadSettings() appSettings {
 		GoogleSecretSet:          s.setting("oauth_google_secret", "") != "",
 		MSClientID:               s.setting("oauth_ms_id", ""),
 		MSSecretSet:              s.setting("oauth_ms_secret", "") != "",
+		MSTenant:                 s.setting(settingMSTenant, ""),
 		AgentAddressesOn:         s.boolSetting(settingAgentAddressesOn),
 		AgentAddresses:           s.setting(settingAgentAddresses, ""),
 		AnthropicAddresses:       anthropicOutbound,
@@ -239,6 +241,7 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 		GoogleSecret             *string `json:"googleClientSecret"`
 		MSClientID               *string `json:"msClientId"`
 		MSSecret                 *string `json:"msClientSecret"`
+		MSTenant                 *string `json:"msTenant"`
 		AllowUserWorkspaces      *bool   `json:"allowUserWorkspaces"`
 		CreatePersonalWorkspaces *bool   `json:"createPersonalWorkspaces"`
 		AgentAddressesOn         *bool   `json:"agentAddressesOn"`
@@ -252,6 +255,18 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	// does not leave half the dialog saved.
 	if !s.validAgentAddresses(w, body.AgentAddressesOn, body.AgentAddresses) {
 		return
+	}
+	// The tenant is checked up front for the same reason, and for one more: it
+	// becomes part of the path of Microsoft's endpoints (normalizeMSTenant).
+	var msTenant string
+	if body.MSTenant != nil {
+		v, ok := normalizeMSTenant(*body.MSTenant)
+		if !ok {
+			httpErrorCode(w, 400, "oauth_tenant_invalid",
+				"The Microsoft tenant must be a directory (tenant) ID or a verified domain name, such as contoso.onmicrosoft.com.")
+			return
+		}
+		msTenant = v
 	}
 	if body.AgentAddresses != nil {
 		s.setSetting(settingAgentAddresses, strings.TrimSpace(*body.AgentAddresses))
@@ -309,6 +324,9 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	set("mail_from_override", body.MailFrom)
 	set("oauth_google_id", body.GoogleClientID)
 	set("oauth_ms_id", body.MSClientID)
+	if body.MSTenant != nil {
+		s.setSetting(settingMSTenant, msTenant)
+	}
 	setSecret := func(key string, v *string) {
 		if v != nil && *v != "" {
 			if *v == "\x00clear" {

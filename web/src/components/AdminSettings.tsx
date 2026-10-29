@@ -109,6 +109,7 @@ export function AdminSettingsModal({ onClose }: { onClose: () => void }) {
           googleClientSecret: '',
           msClientId: v.msClientId,
           msClientSecret: '',
+          msTenant: v.msTenant ?? '',
         });
         setTrustProxy(v.trustProxy);
         setPdf({
@@ -245,6 +246,7 @@ export function AdminSettingsModal({ onClose }: { onClose: () => void }) {
         googleClientSecret: s.googleClientSecret,
         msClientId: s.msClientId,
         msClientSecret: s.msClientSecret,
+        msTenant: s.msTenant,
       });
       toast(t('Settings saved'));
       onClose();
@@ -455,6 +457,13 @@ ingress:
                       <input className="prop-input" placeholder="00000000-0000-…" value={s.msClientId} onChange={(e) => set('msClientId', e.target.value)} />
                       <label>{t('Client secret')}</label>
                       <input className="prop-input" type="password" placeholder={oauthSet.ms ? t('•••••• (stored)') : t('secret value')} value={s.msClientSecret} onChange={(e) => set('msClientSecret', e.target.value)} />
+                      <label>{t('Tenant (optional)')}</label>
+                      <input className="prop-input" placeholder="contoso.onmicrosoft.com" value={s.msTenant} onChange={(e) => set('msTenant', e.target.value)} />
+                      <p className="dialog-hint settings-hint">
+                        {t(
+                          'Needed when the app registration accepts accounts from your own organisation only (single tenant), and useful to keep accounts from other organisations out of the sign-in. Enter the directory (tenant) ID or a verified domain. Empty (default): any organisation and personal accounts.',
+                        )}
+                      </p>
                     </div>
 
                     <h3>{t('Agent keys')}</h3>

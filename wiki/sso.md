@@ -9,7 +9,8 @@ produce.
 
 Two providers, and only two. There is no generic OpenID Connect field, no SAML,
 and no way to point salt.md at a different identity provider. Setting it up is
-an instance admin's job and takes two values per provider.
+an instance admin's job and takes two values per provider, plus an optional
+third for Microsoft.
 
 ## What it does, and what it does not
 
@@ -44,6 +45,7 @@ holds two cards:
 | Google | **Client secret** | the secret created for that client |
 | Microsoft | **Client ID (application ID)** | the application (client) ID of the app registration, a UUID |
 | Microsoft | **Client secret** | the secret **value**, not its id |
+| Microsoft | **Tenant (optional)** | empty, or your organisation's directory (tenant) ID or a domain it has verified. See [One organisation only](#one-organisation-only) |
 
 Press **Save**. A toast says *Settings saved* and the dialog closes.
 
@@ -129,11 +131,54 @@ those are the things to look for:
   types: “Any org + personal accounts”) → Redirect URI (Web): as above but with*
   `/api/oauth/microsoft/callback` *→ Certificates & secrets → client secret.*
 
-One thing about Microsoft is ours to state rather than theirs: **salt.md talks
-to the `common` endpoint**, which accepts work, school and personal accounts
-alike. salt.md does not check which tenant a person came from. If you want one
-tenant only, restrict it in the app registration: that is the only place the
-restriction can live.
+The Microsoft line describes an app for any organisation. For your own
+organisation only, the registration is made differently and salt.md needs the
+tenant as well; see the next section.
+
+### One organisation only
+
+With **Tenant (optional)** left empty, salt.md talks to Microsoft's `common`
+endpoint, which accepts work, school and personal accounts from any
+organisation. Who then gets an account here is still the registration policy's
+decision ([Who gets an account](#who-gets-an-account)), but anybody with a
+Microsoft account gets as far as asking.
+
+Fill the field in when either of these is true:
+
+- **The app registration is for your own organisation only** (supported
+  account types: accounts in this organizational directory only, "single
+  tenant"). Microsoft refuses `common` for such an app (its error is
+  AADSTS50194), so without a tenant nobody signs in. With one, the same
+  registration works.
+- **Accounts from other organisations should stay out** of the sign-in, even
+  with an app registration that would take them.
+
+The field takes one of two things:
+
+- the **directory (tenant) ID**, a UUID Microsoft shows beside the
+  application (client) ID of the app registration. Not that one: both are
+  UUIDs, and Microsoft does not know a directory by its application's ID.
+- a **domain the directory has verified**, such as `contoso.onmicrosoft.com` or
+  a domain of your own like `contoso.com`.
+
+salt.md trims the value and lower-cases it. Anything else is refused on
+**Save** with *The Microsoft tenant must be a directory (tenant) ID or a
+verified domain name, such as contoso.onmicrosoft.com.*, and nothing in the
+dialog is stored until it is right. Emptying the field goes back to `common`.
+
+With a tenant set, salt.md sends the browser to that directory's own sign-in
+page and exchanges the code at that directory's token endpoint, so Microsoft
+signs in only accounts the directory knows. With a **directory ID**, salt.md
+checks the answer as well: the token names the directory the account signed in
+through, and a token naming any other directory, or none, ends the sign-in with
+*This Microsoft account belongs to a different organisation than the one this
+instance is set up for.* A domain cannot be compared that way, because the
+token names the directory by its ID, so with a domain Microsoft's side is the
+only check. Prefer the ID.
+
+The tenant applies to [connecting a mailbox](mail.md) too: **Connect with
+Microsoft** goes to the same directory, so the mailbox has to be one of its
+accounts.
 
 ## What people see
 
@@ -336,6 +381,7 @@ out of the address bar, so a reload does not show it again.
 | *The provider did not supply an email address.* | no address in the token and none from the provider's userinfo endpoint |
 | *This Google address is not verified.* | Google only, and Google's own verdict on the address |
 | *This address belongs to an account that has not confirmed it. Please sign in with a password or contact your administrator.* | an account holds this address but it is not confirmed, **or the account is deactivated** |
+| *This Microsoft account belongs to a different organisation than the one this instance is set up for.* | a directory ID is set under **Tenant (optional)** and the token names another directory, or none. Microsoft's own page already turns such accounts away, so this is salt.md catching an answer that should not have come |
 | *This address cannot create an account here.* | no account, and either the registration policy refuses or the account could not be written. The reason is in the brackets: *…registration here is by invitation* and *…may not register here* are the policy, *the account could not be created* is a database problem for the server log |
 | *The session could not be created.* | the sign-in worked and writing the session did not: a database problem, one for the server log |
 

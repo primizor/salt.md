@@ -156,6 +156,7 @@ export const api = {
       googleSecretSet: boolean;
       msClientId: string;
       msSecretSet: boolean;
+      msTenant: string;
       mailProvider: string;
       mailAddress: string;
       mailFrom: string;

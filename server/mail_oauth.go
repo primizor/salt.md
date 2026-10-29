@@ -47,7 +47,7 @@ func (s *Server) handleMailOAuthStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pname := r.PathValue("provider")
-	prov, ok := oauthProviders[pname]
+	prov, ok := s.oauthEndpoints(pname)
 	if !ok {
 		httpError(w, 404, "unknown provider")
 		return
@@ -107,7 +107,7 @@ func (s *Server) handleMailOAuthCallback(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	pname := r.PathValue("provider")
-	prov, ok := oauthProviders[pname]
+	prov, ok := s.oauthEndpoints(pname)
 	if !ok {
 		httpError(w, 404, "unknown provider")
 		return
@@ -172,7 +172,7 @@ func (s *Server) handleMailOAuthCallback(w http.ResponseWriter, r *http.Request)
 	if json.Unmarshal(body, &tok) != nil || tok.Error != "" {
 		msg := tok.ErrorDesc
 		if msg == "" {
-			msg = "Token-Antwort unlesbar"
+			msg = "token response unreadable"
 		}
 		fail("mail_oauth_provider", "The provider refused the connection.", msg)
 		return
@@ -181,7 +181,7 @@ func (s *Server) handleMailOAuthCallback(w http.ResponseWriter, r *http.Request)
 		fail("mail_oauth_no_refresh", "No refresh token received. Remove the access in your account settings and connect again.")
 		return
 	}
-	email, _, _ := parseIDToken(tok.IDToken)
+	email, _, _, _ := parseIDToken(tok.IDToken)
 	if email == "" && prov.userinfoURL != "" && tok.AccessToken != "" {
 		email, _ = s.fetchUserinfo(prov.userinfoURL, tok.AccessToken, "")
 	}
@@ -223,7 +223,7 @@ func (s *Server) handleMailTest(w http.ResponseWriter, r *http.Request) {
 // refreshedAccessToken swaps the stored refresh token for a fresh access
 // token (mail is rare — no cache needed).
 func (s *Server) refreshedAccessToken(provider string) (string, error) {
-	prov := oauthProviders[provider]
+	prov, _ := s.oauthEndpoints(provider)
 	clientID, clientSecret := s.oauthClient(provider)
 	refresh := s.setting("mail_oauth_refresh", "")
 	if clientID == "" || refresh == "" {

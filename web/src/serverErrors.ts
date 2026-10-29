@@ -172,6 +172,14 @@ export function serverMessage(code: string, fallback: string, data?: ErrorData):
       return t('This address cannot create an account here.');
     case 'oauth_session_failed':
       return t('The session could not be created.');
+    case 'oauth_wrong_tenant':
+      return t('This Microsoft account belongs to a different organisation than the one this instance is set up for.');
+    // Not a sign-in error but the settings dialog's, kept beside the others
+    // about the same tenant.
+    case 'oauth_tenant_invalid':
+      return t(
+        'The Microsoft tenant must be a directory (tenant) ID or a verified domain name, such as contoso.onmicrosoft.com.',
+      );
 
     // ---- connecting a mailbox for sending ----
     case 'mail_oauth_cancelled':

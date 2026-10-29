@@ -147,8 +147,12 @@ automatically gets their own personal workspace and becomes its admin.
 The tab then configures **Sign in with Google / Microsoft (OAuth)**: the
 redirect URIs to paste into the provider's console are shown ready to copy, and
 the client ID and secret go underneath. A stored secret shows as *•••••• (stored)*
-and is never sent back to the browser. The whole procedure, including the one
-mistake that costs an afternoon, is in [Single sign-on](sso.md).
+and is never sent back to the browser. Microsoft has a third field,
+**Tenant (optional)**: empty lets in any organisation, a directory ID or a
+verified domain limits sign-in to that one organisation, and an app registered
+for a single organisation does not work without it
+([One organisation only](sso.md#one-organisation-only)). The whole procedure,
+including the one mistake that costs an afternoon, is in [Single sign-on](sso.md).
 
 #### Agent keys
 

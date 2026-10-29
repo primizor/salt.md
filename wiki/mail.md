@@ -189,7 +189,10 @@ lasting permission at all, and the connection would work once and then stop.
 **Any mailbox will do.** Both sign-in windows are forced to show the account
 picker, and the account you choose has nothing to do with the account you sign
 in to salt.md with; a dedicated `noreply@example.com` sending mailbox is a
-perfectly good choice.
+perfectly good choice. One limit comes from the **Access** tab: with a
+**Tenant (optional)** set for Microsoft, **Connect with Microsoft** goes to that
+directory, and only its accounts can be picked
+([One organisation only](sso.md#one-organisation-only)).
 
 **If you opened salt.md on a different address than its public base URL**,
 pressing Connect sends the browser to the same step on the public address,

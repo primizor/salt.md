@@ -48,12 +48,21 @@ func inContainer() bool {
 // determined. In order: what the operator declared, what the container runtime
 // enforces, and only then what the machine reports.
 func availableMemory() int64 {
+	n, _ := memoryCeiling()
+	return n
+}
+
+// memoryCeiling is availableMemory plus whether the figure is the assumption
+// for a container without a cap. The startup hint has to know where the figure
+// came from: it used to compare the figure with the assumption, so a container
+// capped at exactly 2 GiB was told it had no cap (#117).
+func memoryCeiling() (int64, bool) {
 	// The operator's word beats every guess — and it is the only answer for
 	// nested setups (LXC → Docker), where the inner container can see neither
 	// the outer cap nor a truthful /proc/meminfo.
 	if v := Env("MEMORY_MB"); v != "" {
 		if n, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64); err == nil && n > 0 {
-			return n << 20
+			return n << 20, false
 		}
 		log.Printf("memory: SALT_MEMORY_MB=%q is not a positive number of megabytes — ignoring it", v)
 	}
@@ -75,9 +84,16 @@ func availableMemory() int64 {
 		if err != nil || n <= 0 || n > 1<<50 {
 			break
 		}
-		return n
+		return n, false
 	}
-	return resolveMemory(0, 0, hostMemory(), inContainer())
+	host, container := hostMemory(), inContainer()
+	return resolveMemory(0, 0, host, container), assumedMemory(0, 0, host, container)
+}
+
+// assumedMemory reports whether resolveMemory settles on containerWithoutCap
+// for want of a figure it can trust, rather than reading one. Same inputs.
+func assumedMemory(declared, cgroupCap, host int64, container bool) bool {
+	return declared <= 0 && cgroupCap <= 0 && container && !(host > 0 && host < containerWithoutCap)
 }
 
 // resolveMemory is the decision on its own, so it can be checked against real
@@ -139,7 +155,7 @@ func hostMemory() int64 {
 // and the kernel gets there first. 80% leaves room for everything that is not
 // Go heap (stacks, the SQLite library, file buffers).
 func applyMemoryLimit() {
-	avail := availableMemory()
+	avail, assumed := memoryCeiling()
 	if avail <= 0 {
 		return
 	}
@@ -149,7 +165,7 @@ func applyMemoryLimit() {
 	// Say why, and how to change it. Without this line an operator on a large
 	// machine sees a small figure, has no way to tell an assumption from a
 	// reading, and cannot know that one flag fixes it.
-	if Env("MEMORY_MB") == "" && inContainer() && avail == containerWithoutCap {
+	if assumed {
 		log.Printf("memory: no container limit is set, so this assumes a small instance. " +
 			"Run with --memory=<size> (recommended) or set SALT_MEMORY_MB=<megabytes> " +
 			"to use more — it only affects how much gets indexed, never whether an upload succeeds.")

@@ -87,6 +87,35 @@ func TestUncappedContainerAssumesSmall(t *testing.T) {
 	}
 }
 
+// The startup hint "no container limit is set" belongs to the assumption, not
+// to the number 2 GiB: a container run with --memory=2g has a limit, and
+// telling it otherwise sent an operator off to set SALT_MEMORY_MB on top
+// (#117).
+func TestNoLimitHintOnlyWhenTheFigureIsAssumed(t *testing.T) {
+	cases := []struct {
+		name                      string
+		declared, cgroupCap, host int64
+		container, want           bool
+	}{
+		{"capped at exactly the assumption", 0, containerWithoutCap, 64 << 30, true, false},
+		{"capped elsewhere", 0, 3 << 30, 64 << 30, true, false},
+		{"declared", 2048 << 20, 0, 64 << 30, true, false},
+		{"no cap, large host", 0, 0, 64 << 30, true, true},
+		{"no cap, host unknown", 0, 0, 0, true, true},
+		{"no cap, host smaller than the assumption", 0, 0, 1 << 30, true, false},
+		{"not a container", 0, 0, 2 << 30, false, false},
+	}
+	for _, c := range cases {
+		if got := assumedMemory(c.declared, c.cgroupCap, c.host, c.container); got != c.want {
+			t.Errorf("%s: assumed = %v, want %v", c.name, got, c.want)
+		}
+		// Whenever the hint fires, the figure really is the assumption.
+		if c.want && resolveMemory(c.declared, c.cgroupCap, c.host, c.container) != containerWithoutCap {
+			t.Errorf("%s: the hint fires for a figure that is not the assumption", c.name)
+		}
+	}
+}
+
 // Whatever the machine, one extraction must never be allowed to build more
 // text than we are willing to keep — otherwise the cap is decoration.
 func TestLimitsStayCoherentAcrossMachineSizes(t *testing.T) {

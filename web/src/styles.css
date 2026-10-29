@@ -4940,6 +4940,12 @@ body.is-col-resizing {
   top: 34px;
   right: auto;
   min-width: 200px;
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+}
+
+.ws-menu > * {
+  flex-shrink: 0;
 }
 
 .ws-menu button {

@@ -221,8 +221,8 @@ because renaming a tool breaks every agent configuration in existence.
 | Tool | For |
 | --- | --- |
 | `search` | Full text across everything the caller may read: titles, content, indexed PDFs. Returns matching passages with their heading path. |
-| `list` | What is there of a kind: pages, templates, tags, workspaces, files, users, cover presets. For files, `under: <page id>` narrows it to one page and its sub-pages. |
-| `get_page` | One page as Markdown; `include_children` returns the whole sub-tree in one answer. |
+| `list` | What is there of a kind: pages, templates, tags, workspaces, files, users, cover presets. `workspace_id` narrows pages, templates, tags and files to one workspace; for files, `under: <page id>` narrows it to one page and its sub-pages. |
+| `get_page` | One page as Markdown; `include_children` returns the whole sub-tree in one answer, `include_notes` adds the page's note trail. |
 | `get_collection` | A database's property schema and its views, with ids. |
 | `query_rows` | Rows with server-side filter, sort and paging, including computed rollups and formulas. `filter_groups` adds OR: every condition in `filter` holds, plus one of the groups. |
 | `get_links` | What points at one page, or the whole graph. |
@@ -322,7 +322,7 @@ names using another array from the same response, and a limit, which is how you
 do a trial run of ten records before importing four thousand. See
 [Import and export](import-export.md).
 
-**Every writing tool accepts an idempotency key.** Send the same
+**Every writing tool declares an idempotency key.** Send the same
 `idempotency_key` again on a retry and the first result comes back instead of a
 second page, a second row or a second note. It is the single thing that makes an
 interrupted agent run safe to repeat, and it is worth setting on anything that

@@ -396,6 +396,14 @@ func openDB(path string) (*sql.DB, error) {
 	if err := ensureColumn(db, "pages", "is_template", `is_template INTEGER NOT NULL DEFAULT 0`); err != nil {
 		return nil, fmt.Errorf("migrate pages.is_template: %w", err)
 	}
+	// Which agent wrote a comment, like a note's agent and label: a claim beside
+	// the verified account. Empty for a comment written in the browser (#116).
+	if err := ensureColumn(db, "comments", "agent", `agent TEXT NOT NULL DEFAULT ''`); err != nil {
+		return nil, fmt.Errorf("migrate comments.agent: %w", err)
+	}
+	if err := ensureColumn(db, "comments", "agent_label", `agent_label TEXT NOT NULL DEFAULT ''`); err != nil {
+		return nil, fmt.Errorf("migrate comments.agent_label: %w", err)
+	}
 	// Page tags: a JSON array of short labels (Obsidian-style, workspace-scoped).
 	if err := ensureColumn(db, "pages", "tags", `tags TEXT NOT NULL DEFAULT '[]'`); err != nil {
 		return nil, fmt.Errorf("migrate pages.tags: %w", err)

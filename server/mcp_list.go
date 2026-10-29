@@ -38,12 +38,12 @@ func (s *Server) mcpList(u *user, kind, wsID, under string) (string, error) {
 	case "":
 		return "", fmt.Errorf("kind is required — use one of: %s", listKindList())
 	case "pages":
-		return s.mcpListPages(u)
+		return s.mcpListPages(u, wsID)
 	case "templates":
 		// The only one that wraps its own answer in the untrusted-content
 		// markers; the others are wrapped by the caller. Left as it is rather
 		// than "tidied", because unwrapping to re-wrap is how a marker gets lost.
-		return s.mcpListTemplates(u)
+		return s.mcpListTemplates(u, wsID)
 	case "tags":
 		return s.mcpListTags(u, wsID)
 	case "workspaces":

@@ -148,14 +148,16 @@ down` as an ordinary tool error. Over the body limit the server refuses
 **before reading** (it checks Content-Length first) and tells you to use
 `/api/upload` instead.
 
-### Three arguments no schema mentions
+### Retrying a write
 
-Every writing tool accepts an `idempotency_key`. A retried call carrying the
-same key returns the first call's result instead of doing the work twice; the
-key is scoped per credential (the account, the kind of credential and the
-workspaces it was given) and per tool, so one credential's answer never comes
-back to another. It appears in no tool schema, so a client that validates
-strictly will strip it.
+Every writing tool declares an optional `idempotency_key`. A retried call
+carrying the same key returns the first call's result instead of doing the work
+twice; the key is scoped per credential (the account, the kind of credential and
+the workspaces it was given) and per tool, so one credential's answer never
+comes back to another. For `note`, which nobody can edit or remove, it is the
+only protection against a duplicate.
+
+### Two arguments no schema mentions
 
 `get_page` accepts `recursive` as a synonym for `include_children`, also
 undeclared.
@@ -181,6 +183,16 @@ to it.
 | Bulk import | `import_url`, `get_import_status` |
 | Presence | `working_on` |
 
+Every tool in `tools/list` carries MCP annotations. The reading tools (`list`,
+`search`, `get_page`, `get_links`, `whoami`, `get_workspace`, `get_permissions`,
+`get_collection`, `query_rows`, `get_import_status`) say `readOnlyHint: true`,
+which lets a client in plan mode or a background agent call them without
+treating them as possible writes. Every other tool says `readOnlyHint: false`
+and states `destructiveHint`, `idempotentHint` and `openWorldHint`; only
+`import_url` reaches outside the instance. The reading list is the same one the
+[read-only token](#permissions) is checked against, so what a client is told
+and what such a token may call cannot disagree.
+
 ## Orientation
 
 ### list
@@ -199,7 +211,9 @@ tools.
 
 What each returns:
 
-- **pages**: an indented text tree of every page you may read, each line
+- **pages**: an indented text tree of every page you may read, under one
+  heading per workspace, `Workspace "Name" (workspace_id: …)`, so two pages of
+  the same name in two workspaces can be told apart. Each line reads
   `- Title (id: …)`, with ` [database]` appended to a database. Empty answer:
   `No pages yet.`
 - **templates**: JSON with `id`, `title`, `icon`, `kind`, `description`,
@@ -218,9 +232,11 @@ What each returns:
   you, within the token's scope.
 - **cover_presets**: the 18 gradients the interface's own cover picker offers.
 
-`workspace_id` is honoured by **tags** and **files** only. The other kinds
-ignore it: pages, templates, workspaces and users always span everything the
-token reaches, and cover presets are constants.
+`workspace_id` narrows **pages**, **templates**, **tags** and **files** to that
+workspace; one you are not a member of, or one the connection was not granted,
+answers `workspace "…" not found`. The other kinds ignore it: workspaces and
+users always span everything the token reaches, and cover presets are
+constants.
 
 Three things about the file list are worth knowing, because it is an **index**
 and not a live scan of the disk:
@@ -269,6 +285,7 @@ Read one page as Markdown.
 | --- | --- | --- |
 | `page_id` | string | yes |
 | `include_children` | boolean | no, default false |
+| `include_notes` | boolean | no, default false |
 
 A document comes back as `# Icon Title` followed by the body. A **database**
 comes back as a Markdown table of its rows: a Title column plus one column per
@@ -284,6 +301,13 @@ large. The table above is what a plain `get_page` produces. With
 blocks, and a database page has none. You get an empty heading for the database
 followed by one `---` section per row. Ask for the table, or ask for the
 sub-tree; you cannot have both in one call.
+
+`include_notes` adds the page's [note trail](#note) after either form, under
+`## Note trail`, oldest first. Each note is one line with the time in UTC, the
+account, and the agent it came through when there was one:
+`- 2026-10-27 14:03 UTC, Ada via Claude Code (claude): …`. A page without notes
+says `No notes on this page yet.` The trail is framed as untrusted content, like
+the body.
 
 Errors: `page "…" not found`.
 
@@ -932,10 +956,18 @@ Errors: `unknown action "x" — use list (the default), get or restore`;
 | `body` | string | `add` only |
 | `block_id` | string | `add` only |
 | `comment_id` | string | `resolve` and `reopen` |
+| `agent` | string | no, `add` only |
+| `label` | string | no, `add` only |
 
 `list` returns the page's comments as JSON. `add` posts one; give `block_id` to
 attach it to a single block instead of the page. `resolve` ticks one off,
 `reopen` un-ticks it.
+
+A comment added here carries the agent that wrote it, the way a note does:
+`agent` is one of the known agent keys (anything else becomes `generic`, and so
+does leaving it out) and `label` is what you call yourself. The comments panel
+shows the account and, beside it, the agent's mark and label; in `list` they are
+`agent` and `agentLabel`. A comment written in the browser has neither.
 
 There is also an undeclared `resolved` boolean, and where it appears it wins:
 `action: "resolve"` together with `resolved: false` reopens the comment. Two
@@ -984,17 +1016,18 @@ what makes it worth reading later: you wrote it before you knew how it would
 end. Correct a wrong one by adding another that says so. A person can discard a
 page's whole trail deliberately, and that discarding is itself logged.
 
-Everyone who may read the page sees the trail **in the browser**. No MCP tool
-hands it back: there is no kind of `list` for notes and nothing returns them, so
-an agent can write to the trail and cannot read what it or anyone else wrote
-there. Over HTTP it is `GET /api/pages/{id}/notes`, which needs read permission
-on the page (see [API](api.md)).
+Everyone who may read the page sees the trail: in the browser, over MCP with
+[`get_page`](#get_page) and `include_notes`, and over HTTP as
+`GET /api/pages/{id}/notes`, which needs read permission on the page (see
+[API](api.md)). Read it before you report something another helper may already
+have reported.
 
 This tool needs **write** permission. Text over 2000 characters is truncated
 without complaint.
 
 Returns `Noted, N on that page now. Nobody can edit or remove a single one,
-including you — correct a wrong note by adding another.` Errors:
+including you — correct a wrong note by adding another. get_page with
+include_notes reads the trail.` Errors:
 `a note needs text`; `page "…" not found`.
 
 This is not `working_on`: that says you are here now, this leaves something

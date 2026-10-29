@@ -5,6 +5,7 @@ import type { Comment } from '../types';
 import { Check, MessageSquareText, Trash2, X } from 'lucide-react';
 import { formatRelative } from '../format';
 import { t, plural } from '../i18n';
+import { AgentMark } from './AgentBadge';
 
 // Comments as a panel beside the document.
 //
@@ -180,6 +181,14 @@ export default function CommentsPanel({
                     {c.authorAvatar ? <img src={c.authorAvatar} alt="" /> : initials(name)}
                   </span>
                   <span className="cp-author">{name}</span>
+                  {/* Written through an agent's credential: the person vouches
+                      for it, the agent wrote it, as on the note trail. */}
+                  {c.agent ? (
+                    <span className="cp-agent" title={t('Written by an agent through this account')}>
+                      <AgentMark agent={c.agent} size={12} />
+                      {c.agentLabel || t('Agent')}
+                    </span>
+                  ) : null}
                   <time className="cp-time">{when(c.createdAt)}</time>
                 </div>
                 <div className="cp-body">{c.body}</div>

@@ -20,8 +20,15 @@ import (
 // mcpListTemplates lists the templates the caller may actually read. Same two
 // stages as everywhere else: the token's workspaces first, then canRead per
 // hit, which is what keeps somebody else's private template out of the list.
-func (s *Server) mcpListTemplates(u *user) (string, error) {
+func (s *Server) mcpListTemplates(u *user, wsID string) (string, error) {
 	ws := s.scopeWorkspacesFor(u, s.visibleWorkspaces(u.ID))
+	if wsID != "" {
+		scoped, err := s.mcpWorkspaceScope(u, wsID)
+		if err != nil {
+			return "", err
+		}
+		ws = scoped
+	}
 	if len(ws) == 0 {
 		return "[]", nil
 	}

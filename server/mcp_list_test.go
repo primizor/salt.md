@@ -102,3 +102,45 @@ func TestNoToolNamesAVanishedListTool(t *testing.T) {
 		}
 	}
 }
+
+// workspace_id narrows the page tree and the templates, and without it every
+// workspace gets a heading, so two databases of the same name in two
+// workspaces can be told apart (#111).
+func TestListPagesNarrowsToTheWorkspace(t *testing.T) {
+	s := testServer(t)
+	uid, _ := signedIn(t, s, "two-spaces@example.test")
+	u := &user{ID: uid}
+	a, b := makeWorkspace(t, s, uid), makeWorkspace(t, s, uid)
+	ids := map[string]string{}
+	for _, ws := range []string{a, b} {
+		id := newID()
+		ids[ws] = id
+		if _, err := s.db.Exec(`INSERT INTO pages (id, title, content, position, created_at, updated_at, workspace_id, owner_id, visibility, type, is_template)
+			VALUES (?, 'Tasks', '[]', 0, ?, ?, ?, ?, 'workspace', 'doc', 1)`, id, now(), now(), ws, uid); err != nil {
+			t.Fatalf("insert: %v", err)
+		}
+	}
+	for ws, other := range map[string]string{a: b, b: a} {
+		for _, kind := range []string{"pages", "templates"} {
+			out, err := s.mcpList(u, kind, ws, "")
+			if err != nil {
+				t.Fatalf("%s in %s: %v", kind, ws, err)
+			}
+			if !strings.Contains(out, ids[ws]) || strings.Contains(out, ids[other]) {
+				t.Errorf("%s with workspace_id %s:\n%s", kind, ws, out)
+			}
+		}
+	}
+	all, err := s.mcpList(u, "pages", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ws := range []string{a, b} {
+		if !strings.Contains(all, "(workspace_id: "+ws+")\n- Tasks (id: "+ids[ws]+")") {
+			t.Errorf("the page of %s is not under its workspace's heading:\n%s", ws, all)
+		}
+	}
+	if _, err := s.mcpList(u, "pages", newID(), ""); err == nil {
+		t.Error("a workspace the caller is not a member of was listed")
+	}
+}

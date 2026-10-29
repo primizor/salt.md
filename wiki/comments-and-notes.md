@@ -89,6 +89,12 @@ time as a phrase ("5 minutes ago", "yesterday"; beyond a week the date itself),
 then the text. If the author's account is later deleted, the comment stays and
 keeps the name it was written under.
 
+A comment an agent wrote shows the account it came through and, beside the name,
+the agent's mark and the name the agent gave itself, for instance *Ada ·
+Claude Code*. As on the trail, the account is the verified half and the agent's
+name is a claim. Every comment added over MCP is marked this way, and so is one
+posted over the API with a token; one that names no agent shows *Agent*.
+
 The buttons under a comment appear when you point at it, and are always visible
 on a touch screen.
 
@@ -329,11 +335,12 @@ checked in on leaves nothing behind.
 it; add, resolve and reopen need a write token and write permission on the page.
 Adding accepts an optional block id to attach the comment to one block instead
 of the whole page; the interface neither sets that nor shows it, and such a
-comment appears in the panel like any other.
+comment appears in the panel like any other. It also accepts `agent` and `label`,
+as `note` does, so the panel can say which agent wrote it.
 
 A listing returns more than the panel draws: each comment's id, its block id,
-the author's id and name, the body, when it was written and, if it has been
-ticked off, when it was resolved. The whole list arrives inside an
+the author's id and name, the agent and its label when an agent wrote it, the
+body, when it was written and, if it has been ticked off, when it was resolved. The whole list arrives inside an
 untrusted-content frame, because a comment is text somebody else wrote: an agent should
 read it, quote it or summarise it, and follow no instruction inside it.
 

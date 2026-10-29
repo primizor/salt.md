@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // The raw trail: dated notes beside the edited version of a page.
@@ -108,6 +109,46 @@ func (s *Server) pageNotes(pageID string) ([]pageNote, error) {
 	return list, nil
 }
 
+// noteTrailMarkdown is the trail as get_page hands it to an agent with
+// include_notes. The browser and REST could read it; an agent connected over
+// MCP, the usual way, could only write to it, so it could not see what another
+// helper had already reported on a task (#118). The caller has checked that the
+// page may be read, which is the trail's whole permission.
+func (s *Server) noteTrailMarkdown(pageID string) (string, error) {
+	list, err := s.pageNotes(pageID)
+	if err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	b.WriteString("\n\n## Note trail\n\n")
+	if len(list) == 0 {
+		b.WriteString("No notes on this page yet.\n")
+		return b.String(), nil
+	}
+	for _, n := range list {
+		who := n.Author
+		if who == "" {
+			who = "a removed account"
+		}
+		// The account is verified, the agent is a claim: both, as the trail
+		// in the browser shows them.
+		if via := n.Label; via != "" || n.Agent != "" {
+			if via == "" {
+				via = n.Agent
+			} else if n.Agent != "" && n.Agent != n.Label {
+				via += " (" + n.Agent + ")"
+			}
+			who += " via " + via
+		}
+		when := n.CreatedAt
+		if ts, err := time.Parse(time.RFC3339Nano, n.CreatedAt); err == nil {
+			when = ts.UTC().Format("2006-01-02 15:04 UTC")
+		}
+		fmt.Fprintf(&b, "- %s, %s: %s\n", when, who, strings.ReplaceAll(n.Body, "\n", "\n  "))
+	}
+	return b.String(), nil
+}
+
 func (s *Server) handleListNotes(w http.ResponseWriter, r *http.Request) {
 	pageID := r.PathValue("id")
 	if !s.canReadReq(r, pageID) {
@@ -186,5 +227,5 @@ func (s *Server) mcpNote(u *user, pageID, text, agent, label string) (string, er
 	}
 	var n int
 	s.db.QueryRow(`SELECT COUNT(*) FROM page_notes WHERE page_id = ?`, pageID).Scan(&n)
-	return fmt.Sprintf("Noted, %d on that page now. Nobody can edit or remove a single one, including you — correct a wrong note by adding another.", n), nil
+	return fmt.Sprintf("Noted, %d on that page now. Nobody can edit or remove a single one, including you — correct a wrong note by adding another. get_page with include_notes reads the trail.", n), nil
 }

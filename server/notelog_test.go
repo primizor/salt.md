@@ -245,3 +245,40 @@ func TestALongNoteIsKeptShortenedNotRefused(t *testing.T) {
 		t.Fatal("an empty note was accepted")
 	}
 }
+
+// An agent connected over MCP could write to the trail but not read it, so it
+// could not see what another helper had already reported on a task (#118).
+// get_page with include_notes hands it the trail, framed like the page body.
+func TestGetPageIncludesTheNoteTrail(t *testing.T) {
+	s := testServer(t)
+	uid, _ := signedIn(t, s, "trail-reader@example.test")
+	u := &user{ID: uid, Name: "Grace"}
+	ws := s.firstWorkspaceOf(t, uid)
+	page := s.makePage(t, ws, uid, "", "Task", `{}`)
+
+	if _, err := s.addNote(u, page, "Done from my side.", "claude", "Claude Code"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.addNote(u, page, "Checked by hand.", "", ""); err != nil {
+		t.Fatal(err)
+	}
+	out, err := callTool(t, s, u, "get_page", `{"page_id":"`+page+`","include_notes":true}`)
+	if err != nil {
+		t.Fatalf("get_page: %v", err)
+	}
+	for _, want := range []string{"## Note trail", "Grace via Claude Code (claude): Done from my side.", "Grace: Checked by hand.", "UNTRUSTED"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("get_page with include_notes lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Index(out, "Done from my side.") > strings.Index(out, "Checked by hand.") {
+		t.Error("the trail is not oldest first")
+	}
+	plain, err := callTool(t, s, u, "get_page", `{"page_id":"`+page+`"}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(plain, "Note trail") {
+		t.Error("the trail came without being asked for")
+	}
+}

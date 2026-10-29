@@ -153,6 +153,10 @@ export interface Comment {
   authorColor?: string;
   authorAvatar?: string;
   resolvedAt: string | null;
+  /** The agent that wrote it, when one did: a claim, shown beside the account
+      that vouches for it (server/history.go). */
+  agent?: string;
+  agentLabel?: string;
 }
 
 // One entry of a page's raw trail. No resolvedAt, no editedAt and no author id

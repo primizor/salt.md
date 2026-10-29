@@ -67,3 +67,18 @@ func TestToolsListCarriesAnnotations(t *testing.T) {
 		}
 	}
 }
+
+// Every writing tool honours idempotency_key, so every writing tool declares
+// it; a client that sends only declared arguments could not use it otherwise
+// (#119). A reading tool has nothing to repeat and does not offer it.
+func TestWritingToolsDeclareTheIdempotencyKey(t *testing.T) {
+	for _, tool := range mcpTools {
+		name := tool["name"].(string)
+		schema, _ := tool["inputSchema"].(map[string]any)
+		props, _ := schema["properties"].(map[string]any)
+		_, declared := props["idempotency_key"]
+		if declared == readTools[name] {
+			t.Errorf("%s: declares idempotency_key %v, but writes %v", name, declared, !readTools[name])
+		}
+	}
+}

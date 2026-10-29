@@ -524,7 +524,11 @@ func (srv *Server) pageHTML(p *page, printMode bool, o printOptions) string {
 	if len(o.CommentL) > 0 {
 		b.WriteString(`<section class="doc-comments"><h2>Comments</h2>`)
 		for _, c := range o.CommentL {
-			b.WriteString(`<p class="doc-comment"><span class="who">` + esc(c.AuthorName) + `</span>`)
+			who := c.AuthorName
+			if c.Agent != "" && c.AgentLabel != "" {
+				who += " via " + c.AgentLabel
+			}
+			b.WriteString(`<p class="doc-comment"><span class="who">` + esc(who) + `</span>`)
 			if len(c.CreatedAt) >= 10 {
 				b.WriteString(`<span class="when">` + esc(c.CreatedAt[:10]) + `</span>`)
 			}

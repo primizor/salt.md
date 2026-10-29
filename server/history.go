@@ -140,12 +140,16 @@ type commentJSON struct {
 	// that had nothing to do with the real user colour.
 	AuthorColor  string `json:"authorColor"`
 	AuthorAvatar string `json:"authorAvatar"`
+	// The agent that wrote it, when one did. A claim, shown beside the account
+	// that vouches for it, exactly as on the note trail.
+	Agent      string `json:"agent,omitempty"`
+	AgentLabel string `json:"agentLabel,omitempty"`
 }
 
 func (s *Server) pageComments(pageID string) ([]commentJSON, error) {
 	// LEFT JOIN: the author may be deleted — the comment stays.
 	rows, err := s.db.Query(`SELECT c.id, c.block_id, c.author_id, c.author_name, c.body, c.created_at, c.resolved_at,
-		COALESCE(u.color, ''), COALESCE(u.avatar, '')
+		COALESCE(u.color, ''), COALESCE(u.avatar, ''), c.agent, c.agent_label
 		FROM comments c LEFT JOIN users u ON u.id = c.author_id
 		WHERE c.page_id = ? ORDER BY c.created_at`, pageID)
 	if err != nil {
@@ -156,7 +160,7 @@ func (s *Server) pageComments(pageID string) ([]commentJSON, error) {
 	for rows.Next() {
 		var c commentJSON
 		var resolved sql.NullString
-		rows.Scan(&c.ID, &c.BlockID, &c.AuthorID, &c.AuthorName, &c.Body, &c.CreatedAt, &resolved, &c.AuthorColor, &c.AuthorAvatar)
+		rows.Scan(&c.ID, &c.BlockID, &c.AuthorID, &c.AuthorName, &c.Body, &c.CreatedAt, &resolved, &c.AuthorColor, &c.AuthorAvatar, &c.Agent, &c.AgentLabel)
 		if resolved.Valid {
 			c.ResolvedAt = &resolved.String
 		}
@@ -189,6 +193,8 @@ func (s *Server) handleCreateComment(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Body    string `json:"body"`
 		BlockID string `json:"blockId"`
+		Agent   string `json:"agent"`
+		Label   string `json:"label"`
 	}
 	if err := decodeJSON(w, r, &body); err != nil {
 		httpError(w, 400, "invalid JSON")
@@ -202,13 +208,35 @@ func (s *Server) handleCreateComment(w http.ResponseWriter, r *http.Request) {
 		httpError(w, 400, "comment is too long")
 		return
 	}
+	// A comment that arrives with an API token or a signed-in agent's key came
+	// through an agent, whether or not it says which: marked, so the panel
+	// does not present it as typed by the person. A browser session cannot
+	// claim to be an agent.
+	agent, label := "", ""
+	if u.TokenKind != "" {
+		agent, label = commentAgent(body.Agent, body.Label)
+	}
 	id := newID()
-	if _, err := s.db.Exec(`INSERT INTO comments (id, page_id, block_id, author_id, author_name, body, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		id, pageID, body.BlockID, u.ID, u.Name, strings.TrimSpace(body.Body), now()); err != nil {
+	if _, err := s.db.Exec(`INSERT INTO comments (id, page_id, block_id, author_id, author_name, body, created_at, agent, agent_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		id, pageID, body.BlockID, u.ID, u.Name, strings.TrimSpace(body.Body), now(), agent, label); err != nil {
 		httpError(w, 500, err.Error())
 		return
 	}
 	writeJSON(w, map[string]string{"id": id})
+}
+
+// commentAgent turns what a caller says about itself into the stored pair,
+// the way a note does: a known agent key or "generic", and a label that falls
+// back to whatever it called itself.
+func commentAgent(agent, label string) (string, string) {
+	label = strings.TrimSpace(label)
+	if label == "" {
+		label = strings.TrimSpace(agent)
+	}
+	if r := []rune(label); len(r) > 60 {
+		label = string(r[:60])
+	}
+	return normalizeAgent(agent), label
 }
 
 // handleResolveComment toggles a comment's resolved state.

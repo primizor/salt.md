@@ -147,18 +147,23 @@ workspace created next month is covered too.
 
 `POST /oauth/token` answers `access_token`, `token_type`, `expires_in`
 (3600), `refresh_token` and `scope`. **The refresh token rotates**: each refresh
-replaces the grant, so the previous refresh token stops working.
+hands out a new one, and the previous one stops working. The grant itself stays
+the same one, with its id, its creation date and its last use, so the list of
+connections below does not change under you every hour. Of two refreshes racing
+with the same refresh token, one gets through and the other gets
+`invalid_grant`.
 
 ### Connections you have granted
 
 | Method and path | What it does |
 | --- | --- |
-| `GET /api/oauth/grants` | what is connected to your account: client name, scope, workspaces, when and from where it was last used |
+| `GET /api/oauth/grants` | what is connected to your account: `id`, `clientName`, `scope`, `workspaces` (comma-separated ids, empty for all), `createdAt` (when it was approved), and `lastUsedAt` and `lastUsedIp` |
 | `DELETE /api/oauth/grants/{id}` | disconnect: the grant and every access token minted from it go at once |
 
-Both need a browser sign-in. This is the counterpart to the token list, and it
-is the only way to cut off an agent that signed in: revoking a token does
-nothing to a grant.
+Both need a browser sign-in, and the **Signed-in connections** list in the
+**API tokens** dialog is built on them. This is the counterpart to the token
+list: revoking a token does nothing to a grant, and ending a grant does nothing
+to a token.
 
 ### What a token is, and what it is not
 

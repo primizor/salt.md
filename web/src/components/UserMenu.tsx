@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { api } from '../api';
+import { api, ApiError } from '../api';
 import type { FontPref } from '../App';
-import type { ApiToken, AuditEntry, User, Workspace } from '../types';
+import type { ApiToken, AuditEntry, OAuthGrant, User, Workspace } from '../types';
 import Portal from './Portal';
 import { confirm, promptText } from '../dialog';
 import { toast } from '../toast';
 import { useExclusiveModal } from '../modal';
-import { formatDay, formatMoment } from '../format';
+import { formatMoment, formatRelative } from '../format';
 import { plural, t } from '../i18n';
 import { AdminSettingsModal, TwoFAModal, CalendarSubModal } from './AdminSettings';
 import { Key, History, CalendarDays, ShieldCheck, Users, Settings, LogOut, Bot, User as UserIcon, Columns2, Type, Languages, Undo2, Keyboard, SquareArrowOutUpRight } from 'lucide-react';
@@ -970,6 +970,15 @@ function InvitePanel({
   );
 }
 
+// When a credential was last used, the way people say it ("5 minutes ago"), with
+// the exact moment on hover. An instant, so it goes through formatMoment's side
+// of format.ts: the token list used to hand it to formatDay, which printed the
+// UTC clock time as if it were local.
+function lastUsed(iso: string | null) {
+  if (!iso) return t('never used');
+  return <span title={formatMoment(iso, 'full')}>{t('used {date}', { date: formatRelative(iso) })}</span>;
+}
+
 function TokensModal({ onClose }: { onClose: () => void }) {
   useExclusiveModal(onClose);
   const [tokens, setTokens] = useState<ApiToken[]>([]);
@@ -981,8 +990,21 @@ function TokensModal({ onClose }: { onClose: () => void }) {
   const [fresh, setFresh] = useState<string | null>(null);
   const [copied, setCopied] = useState<'token' | 'cmd' | null>(null);
   const [publicBase, setPublicBase] = useState(window.location.origin);
+  // Agents that signed in instead of carrying a token (oauth_provider.go). Null
+  // until the answer is in: on the list that says who can get in, a slow or
+  // failed request must not look like "nobody".
+  const [grants, setGrants] = useState<OAuthGrant[] | null>(null);
+  const [grantsError, setGrantsError] = useState('');
 
   const load = () => void api.listTokens().then(setTokens);
+  const loadGrants = () =>
+    void api
+      .oauthGrants()
+      .then((list) => {
+        setGrants(list);
+        setGrantsError('');
+      })
+      .catch((e) => setGrantsError(e instanceof Error ? e.message : String(e)));
   useEffect(() => {
     void api
       .publicBase()
@@ -991,12 +1013,34 @@ function TokensModal({ onClose }: { onClose: () => void }) {
   }, []);
   useEffect(() => {
     load();
+    loadGrants();
     void api.listWorkspaces().then(setWorkspaces);
   }, []);
 
   const wsName = (id: string) => workspaces.find((w) => w.id === id)?.name ?? id;
   const toggleWs = (id: string) =>
     setPickedWs((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  const endGrant = async (g: OAuthGrant) => {
+    const ok = await confirm(
+      t(
+        'End the connection with “{client}”? It stops working at once. To connect again, the agent has to ask for your approval again.',
+        { client: g.clientName },
+      ),
+      { confirmText: t('End connection'), danger: true },
+    );
+    if (!ok) return;
+    try {
+      await api.revokeGrant(g.id);
+      setGrants((list) => list && list.filter((x) => x.id !== g.id));
+      toast(t('Connection ended'));
+    } catch (e) {
+      // Already gone: the client ended it from its own side while this list was
+      // open. Show what is there now rather than claim to have ended it.
+      if (e instanceof ApiError && e.status === 404) loadGrants();
+      else toast(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1074,9 +1118,7 @@ function TokensModal({ onClose }: { onClose: () => void }) {
                   ? t('all workspaces')
                   : tk.workspaces.map(wsName).join(', ')}
                 {' · '}
-                {tk.lastUsedAt
-                  ? t('used {date}', { date: formatDay(tk.lastUsedAt) })
-                  : t('never used')}
+                {lastUsed(tk.lastUsedAt)}
                 {/* WHERE from. A token that travels in a URL (/mcp/{token})
                     cannot be kept secret, so the defence is noticing: an
                     address nobody recognises is a question worth asking, and
@@ -1139,6 +1181,60 @@ function TokensModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
         </form>
+
+        {/* The other kind of key. An agent that signed in holds a grant, not a
+            token, and never appears in the list above, so without this the
+            consent screen's "you can end it at any time" pointed at nothing.
+            The consent screen names this place by these two labels. */}
+        <h3>{t('Signed-in connections')}</h3>
+        <p className="dialog-hint">
+          {t('Agents that signed in with your approval instead of using a token. Ending one stops it at once.')}
+        </p>
+        <div className="user-list">
+          {grantsError && <div className="dialog-error">{grantsError}</div>}
+          {!grants && !grantsError && <div className="dialog-hint">{t('Loading…')}</div>}
+          {grants?.map((g) => {
+            // One comma-separated string, and empty means every workspace,
+            // including the ones made later.
+            const ids = g.workspaces.split(',').map((s) => s.trim()).filter(Boolean);
+            return (
+              <div key={g.id} className="user-row">
+                <div className="grant-row-main">
+                  <span className="user-row-name">
+                    <ShieldCheck size={13} /> {g.clientName}{' '}
+                    <span className={'token-scope ' + (g.scope === 'read' ? 'read' : 'write')}>
+                      {g.scope === 'read' ? t('read-only') : t('read-write')}
+                    </span>
+                  </span>
+                  <span className="grant-row-meta">
+                    {ids.length === 0 ? t('all workspaces') : ids.map(wsName).join(', ')}
+                    {' · '}
+                    {t('connected since {date}', { date: formatMoment(g.createdAt, 'date') })}
+                    {' · '}
+                    {lastUsed(g.lastUsedAt)}
+                    {g.lastUsedIp && (
+                      <>
+                        {' · '}
+                        <span className="token-origin">{g.lastUsedIp}</span>
+                      </>
+                    )}
+                  </span>
+                </div>
+                <button
+                  className="icon-btn danger"
+                  title={t('End connection')}
+                  aria-label={t('End connection')}
+                  onClick={() => void endGrant(g)}
+                >
+                  ✕
+                </button>
+              </div>
+            );
+          })}
+          {grants?.length === 0 && (
+            <div className="dialog-hint">{t('No agent is signed in to your account.')}</div>
+          )}
+        </div>
         <button className="btn dialog-close" onClick={onClose}>{t('Close')}</button>
       </div>
     </div>

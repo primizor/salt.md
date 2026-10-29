@@ -55,9 +55,15 @@ const img = (file: string, mono = false) => (
 
 // Hints live apart from the agent table so that t() runs at render time —
 // a module-level constant would freeze whatever language was active at import.
+//
+// A hint names another product's menus, and those move: Claude's custom
+// connectors left Settings for Customize (#115). Its words follow Anthropic's
+// help article on custom connectors (support.claude.com, article 11175166),
+// and the catalogs use that article's own translations, since those are the
+// labels Claude shows in that language.
 const agentHint = (id: string): string =>
   ({
-    'claude-app': t('Settings → Connectors → “Add custom connector”: paste the URL, nothing else.'),
+    'claude-app': t('Customize → Connectors → “+ Add” → “Add custom connector”: a name and the URL, nothing else.'),
     'claude-code': t('One command in the terminal and you are done.'),
     chatgpt: t('Settings → Connectors (Developer Mode): paste the URL.'),
     codex: t('Add it to ~/.codex/config.toml.'),

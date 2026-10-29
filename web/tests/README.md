@@ -52,3 +52,9 @@ row holding several keeps them until somebody picks one after a switch back.
 Filtered creation covers persisted filter defaults, keeping the collection open,
 creation from an embedded collection, and leaving ambiguous alternatives empty
 with an explanation when the new row falls outside the view.
+
+Signed-in connections covers ending an agent's sign-in from the interface
+(#115): the consent screen names the place, the row under API tokens →
+Signed-in connections shows the client, its scope, its workspace and the
+address it was last used from, and ending it there (after a confirmation)
+leaves its access token and its refresh token useless.

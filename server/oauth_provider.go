@@ -430,9 +430,9 @@ func (s *Server) oauthExchangeCode(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) oauthRefresh(w http.ResponseWriter, r *http.Request) {
 	refresh := r.PostFormValue("refresh_token")
-	var id, userID, clientID, scope, workspaces, resource string
-	err := s.db.QueryRow(`SELECT id, user_id, client_id, scope, workspaces, resource FROM oauth_grants WHERE refresh_hash = ?`,
-		tokenHash(refresh)).Scan(&id, &userID, &clientID, &scope, &workspaces, &resource)
+	var id, clientID, scope string
+	err := s.db.QueryRow(`SELECT id, client_id, scope FROM oauth_grants WHERE refresh_hash = ?`,
+		tokenHash(refresh)).Scan(&id, &clientID, &scope)
 	if err != nil {
 		oauthError(w, 400, "invalid_grant", "unknown refresh token")
 		return
@@ -445,29 +445,54 @@ func (s *Server) oauthRefresh(w http.ResponseWriter, r *http.Request) {
 		oauthError(w, 401, "invalid_client", "client authentication failed")
 		return
 	}
-	// The old grant row is replaced, so the previous refresh token stops working
-	// — rotation. A refresh token that stays valid forever is the long-lived
-	// secret this whole thing exists to avoid.
-	s.db.Exec(`DELETE FROM oauth_grants WHERE id = ?`, id)
+	// The previous refresh token stops working — rotation. A refresh token that
+	// stays valid forever is the long-lived secret this whole thing exists to
+	// avoid.
+	//
+	// What rotates is the SECRET, not the connection. The row keeps its id, the
+	// moment it was approved and when it was last used, because a person reads
+	// those in the list of connections and ends one by that id. Replacing the
+	// row, as this used to, moved "connected" to the latest renewal (an hour ago
+	// for anything in use), and an End pressed after a renewal aimed at an id
+	// that no longer existed while the connection carried on under a new one.
+	//
+	// The old hash is part of the condition, so of two requests racing with the
+	// same refresh token exactly one gets through.
+	next := randomToken(32)
+	res, err := s.db.Exec(`UPDATE oauth_grants SET refresh_hash = ? WHERE id = ? AND refresh_hash = ?`,
+		tokenHash(next), id, tokenHash(refresh))
+	if err != nil {
+		oauthError(w, 500, "server_error", "could not renew the grant")
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		oauthError(w, 400, "invalid_grant", "unknown refresh token")
+		return
+	}
 	s.db.Exec(`DELETE FROM oauth_access WHERE grant_id = ?`, id)
-	s.issueGrant(w, r, userID, clientID, scope, workspaces, resource)
+	s.issueAccess(w, id, next, scope)
 }
 
-// issueGrant writes the pair and answers with it: a short access token and the
-// refresh token that keeps the connection alive without anybody signing in
-// again.
+// issueGrant writes a new connection and answers with its pair: a short access
+// token and the refresh token that keeps the connection alive without anybody
+// signing in again.
 func (s *Server) issueGrant(w http.ResponseWriter, r *http.Request, userID, clientID, scope, workspaces, resource string) {
 	grantID := newID()
 	refresh := randomToken(32)
-	access := randomToken(32)
-	exp := time.Now().UTC().Add(oauthAccessTTL)
-
 	if _, err := s.db.Exec(`INSERT INTO oauth_grants (id, user_id, client_id, refresh_hash, scope, workspaces, resource, created_at, last_used_ip)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, '')`,
 		grantID, userID, clientID, tokenHash(refresh), scope, workspaces, resource, now()); err != nil {
 		oauthError(w, 500, "server_error", "could not issue a grant")
 		return
 	}
+	s.issueAccess(w, grantID, refresh, scope)
+}
+
+// issueAccess mints the short-lived half for a grant and answers with both
+// halves, for a new connection and a renewed one alike.
+func (s *Server) issueAccess(w http.ResponseWriter, grantID, refresh, scope string) {
+	access := randomToken(32)
+	exp := time.Now().UTC().Add(oauthAccessTTL)
 	if _, err := s.db.Exec(`INSERT INTO oauth_access (token_hash, grant_id, expires_at) VALUES (?, ?, ?)`,
 		tokenHash(access), grantID, exp.Format(time.RFC3339Nano)); err != nil {
 		oauthError(w, 500, "server_error", "could not issue a token")

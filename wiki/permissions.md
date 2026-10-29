@@ -422,8 +422,9 @@ started this yourself."*
 
 This is the credential **Only signed-in connections** is about: it is
 short-lived, it was chosen on a screen rather than in a settings dialog, and it
-can be taken back. The grants an account has given are listed and revoked
-through `/api/oauth/grants`. See [Agent access](agent-access.md).
+can be taken back. The grants an account has given are listed under **Signed-in
+connections** in its **API tokens** dialog and ended there, through
+`/api/oauth/grants`. See [Agent access](agent-access.md).
 
 ### Asking before acting
 

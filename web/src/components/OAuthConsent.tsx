@@ -178,9 +178,16 @@ export default function OAuthConsent() {
           )}
         </div>
 
+        {/* WHERE, not just that. "In your account settings" sent people
+            looking for a screen that did not exist (#115). The labels are the
+            same t() calls that draw the dialog and its section, so this line
+            names them exactly as they appear, in every language. */}
         <p className="consent-note">
           <ShieldCheck size={14} />{' '}
-          {t('You can end this connection at any time in your account settings.')}
+          {t('You can end this connection at any time: your name at the bottom of the sidebar → {dialog} → {section}.', {
+            dialog: t('API tokens'),
+            section: t('Signed-in connections'),
+          })}
         </p>
 
         {error && <div className="dialog-error">{error}</div>}

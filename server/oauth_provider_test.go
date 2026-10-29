@@ -657,3 +657,117 @@ func makeNamedWorkspace(t *testing.T, s *Server, uid, name string) string {
 	}
 	return id
 }
+
+// The list of connections is the other half of consent, and a person reads it
+// for two answers: since when has this been connected, and is it still in use.
+// Renewing the access token in the background must change neither, nor the id
+// the list ends it by. When a renewal replaced the row, "connected" read as an
+// hour ago for anything in use, and an End pressed after a renewal aimed at a
+// row that no longer existed while the connection carried on under a new one.
+func TestAConnectionKeepsItsPlaceAcrossRenewalsAndCanBeEnded(t *testing.T) {
+	s := testServer(t)
+	uid, cookie := signedIn(t, s, "grants@example.test")
+	ws := s.firstWorkspaceOf(t, uid)
+	redirect := "https://claude.ai/cb"
+	client := oauthClientFixture(t, s, redirect)
+	code := approve(t, s, cookie, client, redirect, pkce("v"), "read", []string{ws})
+	_, out := tokenCall(s, url.Values{
+		"grant_type": {"authorization_code"}, "code": {code},
+		"client_id": {client}, "redirect_uri": {redirect}, "code_verifier": {"v"},
+	})
+	access, _ := out["access_token"].(string)
+	refresh, _ := out["refresh_token"].(string)
+	if access == "" || refresh == "" {
+		t.Fatalf("no tokens: %v", out)
+	}
+
+	call := func(method, path, cookie, bearer string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(method, path, nil)
+		if cookie != "" {
+			r.Header.Set("Cookie", cookie)
+		}
+		if bearer != "" {
+			r.Header.Set("Authorization", "Bearer "+bearer)
+		}
+		rec := httptest.NewRecorder()
+		s.ServeHTTP(rec, r)
+		return rec
+	}
+	list := func() []grantJSON {
+		t.Helper()
+		rec := call("GET", "/api/oauth/grants", cookie, "")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("list: %d %s", rec.Code, rec.Body.String())
+		}
+		var out []grantJSON
+		json.Unmarshal(rec.Body.Bytes(), &out)
+		return out
+	}
+
+	// Used once, so there is a last use to keep.
+	if s.userForAccessToken(access, "203.0.113.7") == nil {
+		t.Fatal("the access token was refused")
+	}
+	before := list()
+	if len(before) != 1 {
+		t.Fatalf("want one connection, got %d", len(before))
+	}
+	g := before[0]
+	if g.ClientName != "Claude" || g.Scope != "read" || g.Workspaces != ws ||
+		g.LastUsedAt == nil || g.LastUsedIP != "203.0.113.7" || g.CreatedAt == "" {
+		t.Fatalf("the list does not say what was granted and when it was used: %+v", g)
+	}
+
+	status, out := tokenCall(s, url.Values{
+		"grant_type": {"refresh_token"}, "refresh_token": {refresh}, "client_id": {client},
+	})
+	if status != http.StatusOK {
+		t.Fatalf("refresh: %d %v", status, out)
+	}
+	renewedAccess, _ := out["access_token"].(string)
+	renewedRefresh, _ := out["refresh_token"].(string)
+
+	after := list()
+	if len(after) != 1 {
+		t.Fatalf("renewing left %d connections in the list, want the one", len(after))
+	}
+	if after[0].ID != g.ID {
+		t.Error("renewing changed the id the connection is ended by")
+	}
+	if after[0].CreatedAt != g.CreatedAt {
+		t.Errorf("renewing moved when it was connected: %s, was %s", after[0].CreatedAt, g.CreatedAt)
+	}
+	if after[0].LastUsedAt == nil || *after[0].LastUsedAt != *g.LastUsedAt || after[0].LastUsedIP != g.LastUsedIP {
+		t.Error("renewing forgot when and where the connection was last used")
+	}
+
+	// Another account cannot end it, and is not told that it exists.
+	_, other := signedIn(t, s, "someone-else@example.test")
+	if rec := call("DELETE", "/api/oauth/grants/"+g.ID, other, ""); rec.Code != http.StatusNotFound {
+		t.Errorf("another account ending the connection got %d, want 404", rec.Code)
+	}
+	// Nor can a credential: the list decides about keys, so it takes a browser.
+	if rec := call("GET", "/api/oauth/grants", "", renewedAccess); rec.Code != http.StatusForbidden {
+		t.Errorf("the connection listed connections with its own token: %d", rec.Code)
+	}
+	if rec := call("DELETE", "/api/oauth/grants/"+g.ID, "", renewedAccess); rec.Code != http.StatusForbidden {
+		t.Errorf("the connection was ended with a token: %d", rec.Code)
+	}
+
+	// Ended by the id the list showed BEFORE the renewal, and both halves of the
+	// live pair die with it.
+	if rec := call("DELETE", "/api/oauth/grants/"+g.ID, cookie, ""); rec.Code != http.StatusOK {
+		t.Fatalf("end: %d %s", rec.Code, rec.Body.String())
+	}
+	if s.userForAccessToken(renewedAccess, "203.0.113.7") != nil {
+		t.Error("the access token outlived the connection")
+	}
+	if status, _ := tokenCall(s, url.Values{
+		"grant_type": {"refresh_token"}, "refresh_token": {renewedRefresh}, "client_id": {client},
+	}); status == http.StatusOK {
+		t.Error("the refresh token outlived the connection — the agent would simply renew its way back")
+	}
+	if left := list(); len(left) != 0 {
+		t.Errorf("an ended connection is still listed: %+v", left)
+	}
+}

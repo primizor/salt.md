@@ -65,7 +65,7 @@ the network still works for an agent outside it.
 | What is secret | Nothing in the address | The address itself |
 | Who decides the reach | The client asks for read, or for read and write. You decide, on a consent screen, which of the two it gets, which workspaces, and whether it gets anything at all. | Whoever creates the token, in advance: the scope and the workspaces both |
 | Lifetime | An access token expires after an hour and is renewed in the background | Until it is revoked |
-| Ends by | Revoking the grant (see below, this one is unfinished) | **Revoke**, in the **API tokens** dialog |
+| Ends by | **End connection**, under **Signed-in connections** in the **API tokens** dialog | **Revoke**, in the **API tokens** dialog |
 
 Sign-in is offered first because nothing secret ends up in a configuration file
 or in the logs of every proxy along the way. A client that cannot sign in will
@@ -98,15 +98,15 @@ The consent screen shows the instance name and host at the top, then:
 The connection then stays connected. Only the short-lived access token rotates,
 invisibly; nobody signs in again every hour.
 
-**Ending one is the unfinished corner of this.** The consent screen says the
-connection can be ended at any time in your account settings, and that screen
-does not exist yet. The server half does (grants can be listed and revoked at
-`/api/oauth/grants`), but nothing in the interface calls it. Until something
-does, a signed-in connection ends when the client revokes it from its own side,
-or when the account behind it is deactivated or deleted: a deactivated account is
-turned away at the MCP endpoint whatever it is carrying. If a connection has to
-stop today and the client will not do it, deactivating the account is the lever
-that works. See [Administration](administration.md).
+**Ending one.** The consent screen closes by saying where: *your name at the
+bottom of the sidebar → API tokens → Signed-in connections*. Every connection on
+your account is listed there with the client's name, **read-only** or
+**read-write**, its workspaces, since when it has been connected, when it was
+last used and from which address. The ✕ on its row (**End connection**) asks
+first, then ends it at once, together with every access token minted from it; to
+come back, the agent has to ask for your approval again. The client can also end
+a connection from its own side, and a deactivated account is turned away at the
+MCP endpoint whatever it is carrying. See [Agent access](agent-access.md#ending-access).
 
 ### A token in the address
 
@@ -136,6 +136,12 @@ chip, its workspaces (or *all workspaces*), when it was last used or *never
 used*, the address it was last used from, and a **Revoke** button. The address is
 worth a glance now and then: a token that travels in a URL cannot be kept secret,
 so noticing an origin nobody recognises is the defence.
+
+Below the tokens, under **Signed-in connections**, the same dialog lists the
+agents that signed in instead, in the same shape plus *connected since* the day
+they were allowed, each with **End connection** (the ✕) in place of **Revoke**.
+A signed-in agent never appears among the tokens, and a token never appears
+here.
 
 Guessing at tokens is throttled per calling address, and only failures count
 towards the budget. An agent making hundreds of calls a minute with a good token

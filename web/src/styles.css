@@ -4150,6 +4150,8 @@ body.is-col-resizing {
   border-radius: 8px;
   vertical-align: middle;
   font-weight: 500;
+  /* "read-write" is one label; in a narrow row it broke at the hyphen. */
+  white-space: nowrap;
 }
 
 .token-scope.read {
@@ -9151,6 +9153,22 @@ body:has(.confirm-dialog) .dialog:not(.confirm-dialog) {
 .token-origin {
   font-variant-numeric: tabular-nums;
   font-family: var(--mono, ui-monospace, monospace);
+}
+
+/* A signed-in connection has more to say than a token (since when, and from
+   where), so its details get a line of their own under the name. Beside it,
+   as a token's do, they squeezed the name into a narrow column. */
+.grant-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.grant-row-meta {
+  color: var(--muted);
+  font-size: 12.5px;
 }
 
 /* --- the consent screen -------------------------------------------------------

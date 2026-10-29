@@ -157,25 +157,27 @@ refills within seconds. A working token never feeds the limit.
 
 ### Checking, and cutting off, what is connected
 
-Two different things can hold access to your account, and they are listed in
-different places.
+Two different things can hold access to your account. Both are in the menu
+under your name, **API tokens**, in two separate lists.
 
-**API tokens**: the menu under your name, **API tokens**. Each row shows the
-token's name, whether it is *read-only* or *read-write*, which workspaces it
-reaches (or *all workspaces*), when it was last used, and **the address it was
-last used from**. That last one is the whole defence for a token that travels
-inside a URL like `/mcp/<token>`: such a token cannot be kept secret, so the
-protection is noticing. An address nobody recognises is a question worth asking,
-and the answer is the ✕ (**Revoke**) button at the end of the row. Revoking is
-immediate and cannot be undone; issue a new token instead.
+**API tokens**: the first list. Each row shows the token's name, whether it is
+*read-only* or *read-write*, which workspaces it reaches (or *all workspaces*),
+when it was last used, and **the address it was last used from**. That last one
+is the whole defence for a token that travels inside a URL like
+`/mcp/<token>`: such a token cannot be kept secret, so the protection is
+noticing. An address nobody recognises is a question worth asking, and the
+answer is the ✕ (**Revoke**) button at the end of the row. Revoking is immediate
+and cannot be undone; issue a new token instead.
 
-**OAuth grants**: an agent that signed in through the browser instead of
-pasting a token holds a grant rather than a token, and it will not appear in the
-token list. There is no dialog for these yet; they are read and removed over the
-API, signed in with a browser session: `GET /api/oauth/grants` lists them (the
-client's name, the scope, the workspaces, when and from where it was last used)
-and `DELETE /api/oauth/grants/{id}` disconnects one. That deletes the grant and
-every access token minted from it at once.
+**Signed-in connections**: the second list, below the tokens. An agent that
+signed in through the browser instead of pasting a token holds a grant rather
+than a token, and it will not appear in the token list. Each row shows the
+client's name, its scope and workspaces, since when it has been connected, and
+when and from where it was last used. The ✕ (**End connection**) asks first,
+then deletes the grant and every access token minted from it at once; the agent
+has to ask for your approval again to come back. Over the API, signed in with a
+browser session, the same list is `GET /api/oauth/grants` and the same ending is
+`DELETE /api/oauth/grants/{id}`.
 
 ### A workspace is missing from the agent's list
 

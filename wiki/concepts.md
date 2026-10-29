@@ -455,7 +455,8 @@ tied to a fixed list of workspaces is refused when it tries to create one.
 Tokens are created and deleted under **API tokens** in the account menu, where
 each one shows its scope, its workspaces, and when and from where it was last
 used: a token that rides in a URL cannot be kept secret, so the defence is
-noticing.
+noticing. Connections sit in the same dialog under **Signed-in connections**,
+shown the same way and ended there.
 
 See [API access](api.md), [Agent access](agent-access.md) and
 [Permissions](permissions.md).
